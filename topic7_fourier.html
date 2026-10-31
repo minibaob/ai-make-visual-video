@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>傅里叶：任何波形都是一堆正弦波</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> FOURIER / 任何波形都是一堆正弦波</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){const s=document.getElementById('stage');const r=s.getBoundingClientRect();W=Math.round(r.width);H=Math.round(r.height);cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30;
+const INTRO_END=75, P0_END=150, P1_END=280, P2_END=410, P3_END=560, OUTRO_END=690;
+let frame=0;
+
+// 方波 = 奇次谐波叠加：f(x) = (4/π) Σ sin((2k+1)x)/(2k+1)
+function squareWave(x, terms){
+  let s=0;
+  for(let k=0;k<terms;k++){
+    const n=2*k+1; // 1,3,5,7,9...
+    s += Math.sin(n*x)/n;
+  }
+  return s * 4/Math.PI;
+}
+
+// 当前谐波项数
+function Ncurrent(){
+  if(frame<P0_END) return 1;
+  if(frame<P1_END){ return 1 + Math.floor((frame-P0_END)/(P1_END-P0_END)*2); } // 1->3
+  if(frame<P2_END){ return 3 + Math.floor((frame-P1_END)/(P2_END-P1_END)*3); } // 3->6
+  if(frame<P3_END){ return 6 + Math.floor((frame-P2_END)/(P3_END-P2_END)*4); } // 6->10
+  return 10;
+}
+
+function setFrame(n){frame=n;draw();}
+const state={last:0};
+function loop(ts){const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;frame+=dt*FPS;if(frame>OUTRO_END+30)frame=0;setFrame(Math.floor(frame));requestAnimationFrame(loop);}
+
+// 世界坐标：x 轴 0~2π，y 轴 -1.5~1.5
+const XMIN=0, XMAX=2*Math.PI, YMIN=-1.5, YMAX=1.5;
+function PX(x){return (x-XMIN)/(XMAX-XMIN)*W;}
+function PY(y){return (YMAX-y)/(YMAX-YMIN)*H;}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const N=Ncurrent();
+
+  // 网格 + 坐标轴
+  ctx.save();
+  ctx.strokeStyle='rgba(140,140,180,0.12)';ctx.lineWidth=1;
+  for(let x=0;x<=2*Math.PI;x+=Math.PI/2){ctx.beginPath();ctx.moveTo(PX(x),0);ctx.lineTo(PX(x),H);ctx.stroke();}
+  for(let y=-1;y<=1;y+=0.5){ctx.beginPath();ctx.moveTo(0,PY(y));ctx.lineTo(W,PY(y));ctx.stroke();}
+  ctx.strokeStyle='rgba(180,180,210,0.35)';ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(0,PY(0));ctx.lineTo(W,PY(0));ctx.stroke();
+  ctx.restore();
+
+  // 刻度数字
+  ctx.save();
+  ctx.font='500 15px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
+  ctx.fillText('0',PX(0)+6,PY(0)+5);
+  ctx.fillText('π/2',PX(Math.PI/2),PY(0)+5);
+  ctx.fillText('π',PX(Math.PI),PY(0)+5);
+  ctx.fillText('3π/2',PX(3*Math.PI/2),PY(0)+5);
+  ctx.fillText('2π',PX(2*Math.PI)-6,PY(0)+5);
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let y=-1;y<=1;y+=0.5){ if(Math.abs(y)<1e-6)continue; ctx.fillText(y, PX(0)-6, PY(y)); }
+  ctx.restore();
+
+  // 目标方波（虚线，理想方波）
+  ctx.save();
+  ctx.strokeStyle='rgba(255,255,255,0.35)';ctx.lineWidth=2.5;ctx.setLineDash([8,6]);
+  ctx.beginPath();
+  // 画理想方波：0~π 为 +1，π~2π 为 -1
+  ctx.moveTo(PX(0),PY(1));
+  ctx.lineTo(PX(Math.PI),PY(1));
+  ctx.lineTo(PX(Math.PI),PY(-1));
+  ctx.lineTo(PX(2*Math.PI),PY(-1));
+  ctx.stroke();ctx.setLineDash([]);
+  ctx.restore();
+
+  // 叠加曲线（随 N 递增越来越接近方波）
+  ctx.save();
+  ctx.strokeStyle='#FFD93D';ctx.lineWidth=4;ctx.lineJoin='round';
+  ctx.shadowColor='rgba(255,217,61,0.6)';ctx.shadowBlur=16;
+  ctx.beginPath();
+  const NP=1000;
+  for(let i=0;i<=NP;i++){
+    const x=XMIN+(XMAX-XMIN)*i/NP;
+    const y=squareWave(x,N);
+    const px=PX(x), py=PY(y);
+    if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+  }
+  ctx.stroke();ctx.restore();
+
+  // 顶部文字
+  ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillText('方波 = (4/π)·Σ sin(nx)/n', 28, 52);
+  ctx.font='700 30px "JetBrains Mono",monospace';ctx.fillStyle='#FFD93D';
+  ctx.fillText(`叠加 ${N} 个正弦波`, 28, 96);
+  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  if(frame<P0_END) ctx.fillText('先看 1 个正弦波（虚线是目标方波）',28,138);
+  else if(frame<P1_END) ctx.fillText('加第 3、第 5 个谐波……',28,138);
+  else if(frame<P2_END) ctx.fillText('尖角越来越方，振铃越来越小',28,138);
+  else ctx.fillText('无限叠加 → 完美方波',28,138);
+  ctx.restore();
+
+  if(frame<INTRO_END) drawIntro(frame/INTRO_END);
+  if(frame>=P3_END) drawOutro((frame-P3_END)/(OUTRO_END-P3_END));
+}
+
+function drawIntro(t){
+  ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
+  const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillText('傅 里 叶 · 分 解', W/2, H*0.34);
+  ctx.fillStyle='#FFFFFF';ctx.font='700 52px "JetBrains Mono",monospace';
+  ctx.fillText('任何波形，', W/2, H*0.46);
+  ctx.fillStyle='#FFD93D';
+  ctx.fillText('都是一堆正弦波叠加出来的', W/2, H*0.46+62);
+  ctx.restore();
+}
+function drawOutro(t){
+  ctx.save();
+  const grad=ctx.createLinearGradient(0,H*0.35,0,H);grad.addColorStop(0,'rgba(10,10,15,0)');grad.addColorStop(1,'rgba(10,10,15,0.92)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 42px "JetBrains Mono",monospace';
+  ctx.fillText('叠加的正弦越多，越接近方波', W/2, H*0.70);
+  ctx.fillStyle='#83C167';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillText('音乐、图像、信号，都靠这个原理', W/2, H*0.70+44);
+  ctx.fillStyle='#FFD93D';ctx.font='600 28px "JetBrains Mono",monospace';
+  ctx.fillText('这就是傅里叶级数的威力', W/2, H*0.70+100);
+  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 22px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
+  ctx.restore();
+}
+
+document.getElementById('reset').addEventListener('click',()=>setFrame(0));
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';document.getElementById('controls').style.display='none';document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>

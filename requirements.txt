@@ -1,0 +1,6 @@
+# 数学可视化短视频生产管线的 Python 依赖
+# 安装：pip install -i https://mirrors.aliyun.com/pypi/simple/ -r requirements.txt
+
+numpy          # 生成配乐（gen_music.py）
+edge-tts       # AI 配音（可选，生成旁白）
+imageio-ffmpeg # 提供 ffmpeg 二进制，免单独安装

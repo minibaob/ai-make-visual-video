@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>导数就是切线的斜率</title>
+<style>
+  :root{
+    --bg:#0A0A0F;
+    --panel:#14141C;
+    --blue:#58C4DD;
+    --green:#83C167;
+    --yellow:#FFD93D;
+    --red:#FF6B6B;
+    --text:#EAEAEA;
+    --muted:#8a8a9a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:"JetBrains Mono","SF Mono","Consolas",ui-monospace,monospace;
+    color:var(--text);
+  }
+  #stage{
+    width:960px;max-width:96vw;
+    aspect-ratio:16/9;
+    position:relative;
+    background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);
+    border:1px solid #23233a;
+    border-radius:14px;
+    overflow:hidden;
+    box-shadow:0 0 80px rgba(88,196,221,0.10);
+  }
+  canvas{display:block;width:100%;height:100%;}
+  #bar{
+    position:absolute;left:0;right:0;bottom:0;height:36px;
+    display:flex;align-items:center;justify-content:center;gap:18px;
+    font-size:13px;letter-spacing:.5px;color:var(--muted);
+    background:linear-gradient(transparent, rgba(10,10,15,.9));
+  }
+  #bar b{color:var(--text);font-weight:600;}
+  .tag{
+    position:absolute;top:14px;left:16px;
+    font-size:11px;letter-spacing:2px;color:var(--muted);
+    text-transform:uppercase;
+  }
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{
+    margin-top:18px;display:flex;gap:12px;align-items:center;
+    font-size:12px;color:var(--muted);
+  }
+  button{
+    font-family:inherit;font-size:12px;letter-spacing:1px;
+    background:#1a1a28;color:var(--text);border:1px solid #2c2c44;
+    padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;
+  }
+  button:hover{background:#23233a;border-color:var(--blue);}
+  .pill{color:var(--muted);}
+  .pill b{color:var(--yellow);font-weight:600;}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> DERIVATIVE &nbsp;/&nbsp; 导数就是切线的斜率</div>
+    <canvas id="cv"></canvas>
+    <div id="bar">
+      <span>割线斜率</span><b id="secVal">—</b>
+      <span>·</span>
+      <span>切线斜率</span><b id="tanVal" style="color:var(--yellow)">—</b>
+      <span>·</span>
+      <span>f′(x)</span><b id="derVal" style="color:var(--green)">—</b>
+    </div>
+  </div>
+  <div id="controls">
+    <span class="pill">函数 <b>f(x)=x³−2x</b></span>
+    <button id="reset">↺ 重播</button>
+  </div>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+let W=960, H=540;
+
+function resize(){
+  const stage = document.getElementById('stage');
+  const r = stage.getBoundingClientRect();
+  W = Math.round(r.width);
+  H = Math.round(r.height);
+  cv.width = W*DPR; cv.height = H*DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// 函数定义（用归一化坐标 -> 像素映射）
+// 世界坐标范围
+const XMIN=-2.2, XMAX=2.2, YMIN=-2.6, YMAX=2.6;
+
+function f(x){ return x*x*x - 2*x; }         // f(x)=x^3-2x
+function fp(x){ return 3*x*x - 2; }          // f'(x)=3x^2-2
+
+function toPx(x,y){
+  return [
+    (x-XMIN)/(XMAX-XMIN)*W,
+    (YMAX-y)/(YMAX-YMIN)*H
+  ];
+}
+
+// 状态
+let a = -1.6;        // 当前点 x
+let h = 0.9;         // 割线步长（会逐渐 -> 0，展示极限）
+let phase = 0;       // 0=展示割线, 1=收缩h, 2=切线强调
+let frame = 0;       // 当前帧号（确定性驱动）
+
+// 时间轴设计（30fps，总时长 ~ 17 秒）
+// 片头 intro:  0    ~ 2.5s  (2.5s)   -> frame 0~75   钩子文字
+// 主体 phase0: 2.5  ~ 6.5s  (4.0s)   -> frame 75~195  点移动+割线
+// 主体 phase1: 6.5  ~ 8.5s  (2.0s)   -> frame 195~255 h收缩 割线->切线
+// 主体 phase2: 8.5  ~ 14.0s (5.5s)   -> frame 255~420 切线强调
+// 片尾 outro:  14.0 ~ 17.0s (3.0s)   -> frame 420~510 总结卡
+const FPS = 30;
+const INTRO_END = 75;
+const P0_END = 195, P1_END = 255, P2_END = 420, OUTRO_END = 510;
+const A_SPEED = 3.2 / 120;        // phase0 从 -1.6 -> 1.6 共 3.2 个 x，跨 120 帧
+const H_SPEED = 0.88 / 60;        // h 从 0.9 -> 0.02，跨 60 帧
+const P2_SPEED = 3.2 / 165;       // phase2 再走一遍
+
+function setFrame(n){
+  frame = n;
+  if(n < INTRO_END){
+    phase = 0; a = -1.6; h = 0.9;   // 片头：画面静止在起始态
+  } else if(n < P0_END){
+    phase = 0;
+    a = -1.6 + A_SPEED * (n - INTRO_END);
+    h = 0.9;
+  } else if(n < P1_END){
+    phase = 1;
+    a = 1.6;
+    h = 0.9 - H_SPEED * (n - P0_END);
+  } else if(n < P2_END){
+    phase = 2;
+    a = -1.6 + P2_SPEED * (n - P1_END);
+    h = 0.02;
+  } else {
+    // 片尾：定格在切线阶段末尾（a 停在 1.6）
+    phase = 2;
+    a = 1.6;
+    h = 0.02;
+  }
+  draw();
+}
+
+function reset(){
+  setFrame(0);
+}
+
+// 实时预览：用 requestAnimationFrame 推进帧号
+const state = { last:0 };
+function loop(ts){
+  const dt = state.last ? Math.min((ts-state.last)/1000, 0.05) : 0.016;
+  state.last = ts;
+  frame += dt * FPS;
+  if(frame > OUTRO_END + 30) frame = 0;   // 播完留白后循环
+  setFrame(Math.floor(frame));
+  requestAnimationFrame(loop);
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  // ---- 网格（透明度分层：结构元素 0.15）----
+  ctx.save();
+  ctx.strokeStyle='rgba(140,140,180,0.12)';
+  ctx.lineWidth=1;
+  const gx=0.6, gy=0.6;
+  for(let x=Math.ceil(XMIN/gx)*gx; x<=XMAX; x+=gx){
+    if(Math.abs(x)<1e-9) continue;
+    const [px]=toPx(x,0); 
+    ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,H);ctx.stroke();
+  }
+  for(let y=Math.ceil(YMIN/gy)*gy; y<=YMAX; y+=gy){
+    if(Math.abs(y)<1e-9) continue;
+    const [,py]=toPx(0,y);
+    ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(W,py);ctx.stroke();
+  }
+  // 坐标轴（更亮一点）
+  ctx.strokeStyle='rgba(180,180,210,0.35)';
+  ctx.lineWidth=1.4;
+  const [ox]=toPx(0,0), [,oy]=toPx(0,0);
+  ctx.beginPath();ctx.moveTo(0,oy);ctx.lineTo(W,oy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox,H);ctx.stroke();
+  ctx.restore();
+
+  // ---- 曲线（主元素）----
+  ctx.save();
+  ctx.strokeStyle='#58C4DD';
+  ctx.lineWidth=3;
+  ctx.lineJoin='round';
+  ctx.shadowColor='rgba(88,196,221,0.5)';
+  ctx.shadowBlur=12;
+  ctx.beginPath();
+  const N=360;
+  for(let i=0;i<=N;i++){
+    const x=XMIN+(XMAX-XMIN)*i/N;
+    const [px,py]=toPx(x,f(x));
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  const [ax,ay]=toPx(a,f(a));
+
+  // ---- 割线（红，当 h 还没收敛）----
+  if(phase<2 || h>0.05){
+    const b=a+h;
+    const [bx,by]=toPx(b,f(b));
+    // 延长割线跨越整个画面
+    const slope=(f(b)-f(a))/h;
+    drawLineThrough(ax,ay,slope,'rgba(255,107,107,0.85)',2.5);
+    // 两个点
+    dot(ax,ay,'#FF6B6B',5);
+    dot(bx,by,'#FF6B6B',5);
+    // 标注两个端点
+    if(phase===0){
+      label('a', ax, ay, '#FF6B6B');
+      label('a+h', bx, by, '#FF6B6B');
+    }
+  }
+
+  // ---- 切线（黄，始终画，h 收敛后主角）----
+  const slope=fp(a);
+  drawLineThrough(ax,ay,slope,'rgba(255,217,61,0.95)',3);
+  dot(ax,ay,'#FFD93D',7);
+  label('P', ax, ay, '#FFD93D');
+
+  // ---- 斜率三角形（切线上）----
+  if(phase>=1){
+    drawSlopeTriangle(ax,ay,slope);
+  }
+
+  // ---- 顶部公式标注 ----
+  ctx.save();
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.font='600 22px "JetBrains Mono","Consolas",monospace';
+  ctx.fillStyle='rgba(255,255,255,0.95)';
+  ctx.fillText('f(x) = x³ − 2x', 20, 46);
+  ctx.font='500 18px "JetBrains Mono","Consolas",monospace';
+  ctx.fillStyle='#FFD93D';
+  ctx.fillText("切线斜率 = f′(x) = 3x² − 2", 20, 78);
+  ctx.fillStyle='#FF6B6B';
+  if(phase<2){
+    ctx.fillText(`割线斜率 ≈ ${(f(a+h)-f(a))/h>=0?'':'−'}${Math.abs((f(a+h)-f(a))/h).toFixed(2)}  (h→0)`, 20, 108);
+  } else {
+    ctx.fillStyle='#83C167';
+    ctx.fillText(`当 h→0，割线 → 切线`, 20, 108);
+  }
+  ctx.restore();
+
+  // ---- 实时数值 ----
+  document.getElementById('secVal').textContent =
+    phase<2 ? ((f(a+h)-f(a))/h).toFixed(3) : '—';
+  document.getElementById('tanVal').textContent = slope.toFixed(3);
+  document.getElementById('derVal').textContent = slope.toFixed(3);
+
+  // ---- 片头钩子 ----
+  if(frame < INTRO_END){
+    drawIntro(frame / INTRO_END);
+  }
+  // ---- 片尾总结卡 ----
+  if(frame >= P2_END){
+    drawOutro((frame - P2_END) / (OUTRO_END - P2_END));
+  }
+}
+
+// 片头：反常识钩子淡入
+function drawIntro(t){
+  // t: 0 -> 1
+  ctx.save();
+  // 不透明深色底，彻底盖住底下画面
+  ctx.fillStyle = '#0A0A0F';
+  ctx.fillRect(0,0,W,H);
+
+  const ease = t < 0.25 ? 0 : Math.min(1, (t-0.25)/0.5); // 0.25~0.75 淡入
+  ctx.globalAlpha = ease;
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  // 小标签
+  ctx.fillStyle = '#58C4DD';
+  ctx.font = '500 22px "JetBrains Mono","Consolas",monospace';
+  ctx.fillText('导 数 · 几 何 意 义', W/2, H*0.38);
+
+  // 主钩子
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '700 56px "JetBrains Mono","Consolas",monospace';
+  ctx.fillText('斜率，是函数那一瞬间', W/2, H*0.50);
+  ctx.fillStyle = '#FFD93D';
+  ctx.fillText('想 要 去 的 方 向', W/2, H*0.50 + 72);
+
+  ctx.restore();
+}
+
+// 片尾：总结 + 引导
+function drawOutro(t){
+  ctx.save();
+  // 底部渐暗，突出文字
+  const grad = ctx.createLinearGradient(0, H*0.35, 0, H);
+  grad.addColorStop(0, 'rgba(10,10,15,0)');
+  grad.addColorStop(1, 'rgba(10,10,15,0.92)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
+
+  const ease = Math.min(1, t/0.3); // 前 0.9 秒淡入
+  ctx.globalAlpha = ease;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '700 48px "JetBrains Mono","Consolas",monospace';
+  ctx.fillText('f′(x) = lim  [f(x+h) − f(x)] / h', W/2, H*0.78 - 40);
+  ctx.fillText('h→0', W/2, H*0.78 + 24);
+
+  ctx.fillStyle = '#83C167';
+  ctx.font = '500 26px "JetBrains Mono","Consolas",monospace';
+  ctx.fillText('切线，是割线在两点无限靠近时的极限', W/2, H*0.78 + 80);
+
+  // 关注引导
+  if(t > 0.5){
+    ctx.globalAlpha = Math.min(1, (t-0.5)/0.3);
+    ctx.fillStyle = '#8a8a9a';
+    ctx.font = '500 22px "JetBrains Mono","Consolas",monospace';
+    ctx.fillText('关注 · 每天一个可视化概念', W/2, H*0.90);
+  }
+  ctx.restore();
+}
+
+function drawLineThrough(px,py,slope,color,width){
+  // 从点沿斜率延伸到画面外
+  const long = 2000;
+  const dx = long / Math.sqrt(1+slope*slope);
+  const dy = slope*dx;
+  ctx.save();
+  ctx.strokeStyle=color; ctx.lineWidth=width; ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(px-dx, py+dy); // 注意 y 轴翻转，切线在像素坐标斜率取 -slope
+  ctx.lineTo(px+dx, py-dy);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function dot(px,py,color,r){
+  ctx.save();
+  ctx.fillStyle=color;
+  ctx.shadowColor=color; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function label(txt,px,py,color){
+  ctx.save();
+  ctx.font='500 14px "JetBrains Mono","Consolas",monospace';
+  ctx.fillStyle=color;
+  ctx.textAlign='left'; ctx.textBaseline='bottom';
+  ctx.fillText(txt, px+10, py-8);
+  ctx.restore();
+}
+
+function drawSlopeTriangle(px,py,slope){
+  // 画一个小的 run/rise 三角形
+  const run = 46;
+  const rise = slope*run;
+  ctx.save();
+  ctx.strokeStyle='rgba(255,217,61,0.8)';
+  ctx.lineWidth=1.6;
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.lineTo(px+run, py);
+  ctx.lineTo(px+run, py-rise);
+  ctx.stroke();
+  // 小箭头标注斜率
+  ctx.fillStyle='rgba(255,217,61,0.9)';
+  ctx.font='500 13px "JetBrains Mono","Consolas",monospace';
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  const labelY = rise>0 ? py-rise-4 : py+4;
+  ctx.fillText('Δy', px+run+6, (py + (py-rise))/2 - 7);
+  ctx.fillText('Δx', px+run/2-8, py+6);
+  ctx.restore();
+}
+
+document.getElementById('reset').addEventListener('click', ()=>{ reset(); });
+
+// 导出模式：URL 带 ?export=1 时不启动实时循环、隐藏底栏和按钮，由外部脚本逐帧调用 window.__renderFrame
+const EXPORT_MODE = new URLSearchParams(location.search).get('export') === '1';
+if(EXPORT_MODE){
+  // 固定 1920×1080 输出，覆盖响应式宽度限制
+  const stage = document.getElementById('stage');
+  stage.style.width = '1920px';
+  stage.style.maxWidth = 'none';
+  stage.style.height = '1080px';
+  stage.style.aspectRatio = 'auto';
+  stage.style.border = 'none';
+  stage.style.borderRadius = '0';
+  stage.style.boxShadow = 'none';
+  document.body.style.margin = '0';
+  document.getElementById('bar').style.display = 'none';
+  document.getElementById('controls').style.display = 'none';
+  document.querySelector('.tag').style.display = 'none';
+  resize(); // 重新计算 canvas 尺寸
+  // 提供逐帧渲染接口
+  window.__renderFrame = (n) => { setFrame(n); };
+  setFrame(0);
+} else {
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

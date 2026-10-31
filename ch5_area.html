@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>面积问题：积分</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> CH5 / 面积问题：积分</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){const s=document.getElementById('stage');const r=s.getBoundingClientRect();W=Math.round(r.width);H=Math.round(r.height);cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30;
+const INTRO_END=75, MAIN_END=1650, OUTRO_END=1800;
+let frame=0;
+
+function f(x){ return Math.sin(x)+1.2; } // 0.2~2.2 的曲线，x 0~π
+const XMIN=0, XMAX=Math.PI;
+function PX(x){return (x-XMIN)/(XMAX-XMIN)*W;}
+function PY(y){return H*0.12 + (2.4-y)/(2.4)*H*0.75;} // y 0~2.4 映射
+
+function setFrame(n){frame=n;draw();}
+const state={last:0};
+function loop(ts){const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;frame+=dt*FPS;if(frame>OUTRO_END+30)frame=0;setFrame(Math.floor(frame));requestAnimationFrame(loop);}
+
+// 当前矩形数量（随阶段递增，展示"越细越准"）
+function Nrect(){
+  if(frame<INTRO_END) return 4;
+  const t=(frame-INTRO_END)/(MAIN_END-INTRO_END);
+  // 4 -> 64，指数增长让"变细"过程明显
+  return Math.floor(4 * Math.pow(16, t));
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const N=Nrect();
+
+  // 网格 + 坐标轴
+  ctx.save();
+  ctx.strokeStyle='rgba(140,140,180,0.12)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,PY(0));ctx.lineTo(W,PY(0));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(PX(0),0);ctx.lineTo(PX(0),H);ctx.stroke();
+  ctx.strokeStyle='rgba(180,180,210,0.35)';ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(0,PY(0));ctx.lineTo(W,PY(0));ctx.stroke();
+  ctx.restore();
+
+  // 刻度
+  ctx.save();
+  ctx.font='500 15px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
+  ctx.fillText('0',PX(0)+4,PY(0)+5);
+  ctx.fillText('π',PX(Math.PI)-4,PY(0)+5);
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  ctx.fillText('1',PX(0)-6,PY(1));ctx.fillText('2',PX(0)-6,PY(2));
+  ctx.restore();
+  // 曲线
+  ctx.save();
+  ctx.strokeStyle='#58C4DD';ctx.lineWidth=4;ctx.lineJoin='round';
+  ctx.shadowColor='rgba(88,196,221,0.6)';ctx.shadowBlur=16;
+  ctx.beginPath();
+  for(let i=0;i<=400;i++){const x=XMIN+(XMAX-XMIN)*i/400;const px=PX(x),py=PY(f(x));if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+  ctx.stroke();ctx.restore();
+
+  // 黎曼和矩形（左端点）
+  const dx=(XMAX-XMIN)/N;
+  let total=0;
+  ctx.save();
+  for(let i=0;i<N;i++){
+    const x=XMIN+i*dx;
+    const y=f(x);
+    total += y*dx;
+    const px1=PX(x), px2=PX(x+dx), pyTop=PY(y), pyBot=PY(0);
+    ctx.fillStyle='rgba(255,217,61,0.18)';
+    ctx.strokeStyle='rgba(255,217,61,0.6)';
+    ctx.lineWidth=1;
+    ctx.fillRect(px1, pyTop, px2-px1, pyBot-pyTop);
+    ctx.strokeRect(px1, pyTop, px2-px1, pyBot-pyTop);
+  }
+  ctx.restore();
+
+  // 面积数值（移到右下角，避免和标题重叠）
+  ctx.save();
+  ctx.textAlign='right';ctx.textBaseline='bottom';
+  ctx.fillStyle='#FFD93D';ctx.font='700 30px "JetBrains Mono",monospace';
+  ctx.fillText(`近似面积 ≈ ${total.toFixed(3)}`, W-28, H-80);
+  ctx.font='500 22px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  ctx.fillText(`真实面积 = ${(Math.cos(0)-Math.cos(Math.PI)+1.2*Math.PI).toFixed(3)}`, W-28, H-42);
+  ctx.restore();
+
+  // 顶部文字
+  ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillText('面积问题：积分', 28, 52);
+  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  if(frame<INTRO_END) ctx.fillText('曲线下的面积怎么算？',28,138);
+  else if(N<=8) ctx.fillText(`${N} 个矩形：还很粗糙`,28,138);
+  else if(N<=32) ctx.fillText(`${N} 个矩形：明显更准了`,28,138);
+  else ctx.fillText(`${N} 个矩形：几乎就是真实面积`,28,138);
+  ctx.restore();
+
+  if(frame<INTRO_END) drawIntro(frame/INTRO_END);
+  if(frame>=MAIN_END) drawOutro((frame-MAIN_END)/(OUTRO_END-MAIN_END));
+}
+
+function drawIntro(t){
+  ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
+  const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillText('第 五 章 · 面 积 问 题', W/2, H*0.4);
+  ctx.fillStyle='#FFFFFF';ctx.font='700 50px "JetBrains Mono",monospace';
+  ctx.fillText('积分：无限细分的累加', W/2, H*0.5);
+  ctx.restore();
+}
+function drawOutro(t){
+  ctx.save();
+  const grad=ctx.createLinearGradient(0,H*0.35,0,H);grad.addColorStop(0,'rgba(10,10,15,0)');grad.addColorStop(1,'rgba(10,10,15,0.92)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#83C167';ctx.font='700 40px "JetBrains Mono",monospace';
+  ctx.fillText('矩形越细，面积越准', W/2, H*0.72);
+  ctx.fillStyle='#FFD93D';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillText('极限 → 积分', W/2, H*0.72+46);
+  ctx.restore();
+}
+
+document.getElementById('reset').addEventListener('click',()=>setFrame(0));
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';document.getElementById('controls').style.display='none';document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>

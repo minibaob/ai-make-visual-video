@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>为什么微分其实是谎言——但有用</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> CALCULUS LIE / 微分的谎言</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+let W=960, H=540;
+function resize(){
+  const stage = document.getElementById('stage');
+  const r = stage.getBoundingClientRect();
+  W = Math.round(r.width); H = Math.round(r.height);
+  cv.width = W*DPR; cv.height = H*DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize); resize();
+
+const FPS = 30;
+const INTRO_END = 75, P0_END = 180, P1_END = 300, P2_END = 430, OUTRO_END = 510;
+let frame = 0;
+
+// 曲线：f(x)=x^2（放大点 x0=1）
+const X0 = 1.0;
+function f(x){ return x*x; }
+function fp(x){ return 2*x; }
+
+function setFrame(n){
+  frame = n;
+  draw();
+}
+
+const state={last:0};
+function loop(ts){
+  const dt = state.last ? Math.min((ts-state.last)/1000, 0.05) : 0.016;
+  state.last = ts;
+  frame += dt*FPS;
+  if(frame > OUTRO_END+30) frame=0;
+  setFrame(Math.floor(frame));
+  requestAnimationFrame(loop);
+}
+
+// 计算当前缩放级别 zoom（1 = 全貌）
+function zoomLevel(){
+  if(frame < INTRO_END) return 1;
+  if(frame < P0_END) return 1;                       // 全貌展示
+  if(frame < P1_END) return 1 + (frame-P0_END)/(P1_END-P0_END)*9;  // 放大 1->10
+  if(frame < P2_END) return 10 + (frame-P1_END)/(P2_END-P1_END)*90; // 放大 10->100
+  return 100;
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  // 网格
+  const z = zoomLevel();
+  const span = 3.0 / z;   // 视野半宽
+  ctx.save();
+  ctx.strokeStyle='rgba(140,140,180,0.12)'; ctx.lineWidth=1;
+  const step = span/4;
+  for(let gx=X0-span; gx<=X0+span; gx+=step){
+    if(Math.abs(gx-X0)<1e-6) continue;
+    const px=W/2 + (gx-X0)/span*(W/2);
+    ctx.beginPath(); ctx.moveTo(px,0); ctx.lineTo(px,H); ctx.stroke();
+  }
+  for(let gy=f(X0)-span*3; gy<=f(X0)+span*3; gy+=step){
+    const py=H/2 - (gy-f(X0))/span*(H/2);
+    ctx.beginPath(); ctx.moveTo(0,py); ctx.lineTo(W,py); ctx.stroke();
+  }
+  ctx.restore();
+
+  // 曲线
+  ctx.save();
+  ctx.strokeStyle='#58C4DD'; ctx.lineWidth=4; ctx.lineJoin='round';
+  ctx.shadowColor='rgba(88,196,221,0.5)'; ctx.shadowBlur=12;
+  ctx.beginPath();
+  const N=400;
+  for(let i=0;i<=N;i++){
+    const x=X0-span+(2*span)*i/N;
+    const y=f(x);
+    const px=W/2+(x-X0)/span*(W/2);
+    const py=H/2-(y-f(X0))/span*(H/2);
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.stroke(); ctx.restore();
+
+  // 切线（线性近似）—— 在放大后曲线和切线几乎重合，这就是"谎言"
+  ctx.save();
+  ctx.strokeStyle='rgba(255,217,61,0.9)'; ctx.lineWidth=3;
+  const slope=fp(X0);
+  ctx.beginPath();
+  ctx.moveTo(0, H/2 + slope*(span)*(H/2)/span);  // 左端点
+  ctx.lineTo(W, H/2 - slope*(span)*(H/2)/span);  // 右端点
+  ctx.stroke(); ctx.restore();
+
+  // 切点
+  ctx.save();
+  ctx.fillStyle='#FFD93D'; ctx.shadowColor='#FFD93D'; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.arc(W/2,H/2,7,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // 误差指示：曲线与切线之间的差距（放大后趋近0）
+  if(frame >= P0_END){
+    // 固定在屏幕 70% 宽度处测量，误差随放大可见地缩小
+    const xEdge = X0 + span*0.7;
+    const yCurve = f(xEdge);
+    const yLine = f(X0) + slope*(xEdge-X0);
+    const err = Math.abs(yCurve-yLine);
+    const pxc = W/2 + (xEdge-X0)/span*(W/2);
+    const pyc = H/2 - (yCurve-f(X0))/span*(H/2);
+    const pyl = H/2 - (yLine-f(X0))/span*(H/2);
+    ctx.save();
+    ctx.strokeStyle='#FF6B6B'; ctx.lineWidth=2.5;
+    ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(pxc,pyc); ctx.lineTo(pxc,pyl); ctx.stroke();
+    ctx.fillStyle='#FF6B6B';
+    ctx.font='500 16px "JetBrains Mono",monospace';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    const errText = err < 1e-9 ? '误差 → 0' : `误差 ${err.toFixed(3)}`;
+    ctx.fillText(errText, pxc+8, (pyc+pyl)/2);
+    ctx.restore();
+  }
+
+  // 顶部文字
+  ctx.save();
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillStyle='rgba(255,255,255,0.95)';
+  ctx.font='600 22px "JetBrains Mono",monospace';
+  ctx.fillText('f(x) = x²  在 x=1 处', 20, 46);
+  ctx.fillStyle='#FFD93D';
+  ctx.font='500 18px "JetBrains Mono",monospace';
+  if(frame < P0_END){
+    ctx.fillText('曲线在远处是弯的 —— 显然不是直线', 20, 78);
+  } else if(frame < P1_END){
+    ctx.fillText('放大看……它越来越像直线', 20, 78);
+  } else {
+    ctx.fillText(`放大 ${z.toFixed(0)} 倍后，曲线 ≈ 切线（局部线性）`, 20, 78);
+  }
+  ctx.restore();
+
+  // 片头 / 片尾
+  if(frame < INTRO_END) drawIntro(frame/INTRO_END);
+  if(frame >= P2_END) drawOutro((frame-P2_END)/(OUTRO_END-P2_END));
+}
+
+function drawIntro(t){
+  ctx.save();
+  ctx.fillStyle='#0A0A0F'; ctx.fillRect(0,0,W,H);
+  const ease = t<0.25?0:Math.min(1,(t-0.25)/0.5);
+  ctx.globalAlpha=ease;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#58C4DD'; ctx.font='500 22px "JetBrains Mono",monospace';
+  ctx.fillText('微 分 · 真 相', W/2, H*0.36);
+  ctx.fillStyle='#FFFFFF'; ctx.font='700 52px "JetBrains Mono",monospace';
+  ctx.fillText('微分的核心，其实是', W/2, H*0.48);
+  ctx.fillStyle='#FFD93D';
+  ctx.fillText('一 个 「 谎 言 」', W/2, H*0.48+68);
+  ctx.fillStyle='#EAEAEA'; ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillText('—— 但正是它，撑起了整个现代世界', W/2, H*0.48+130);
+  ctx.restore();
+}
+
+function drawOutro(t){
+  ctx.save();
+  const grad=ctx.createLinearGradient(0,H*0.35,0,H);
+  grad.addColorStop(0,'rgba(10,10,15,0)'); grad.addColorStop(1,'rgba(10,10,15,0.92)');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  const ease=Math.min(1,t/0.3); ctx.globalAlpha=ease;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#FFFFFF'; ctx.font='700 44px "JetBrains Mono",monospace';
+  ctx.fillText('“直线近似曲线”并不精确', W/2, H*0.72);
+  ctx.fillStyle='#83C167';
+  ctx.fillText('但放大到足够小，误差 → 0', W/2, H*0.72+54);
+  ctx.fillStyle='#FFD93D'; ctx.font='600 30px "JetBrains Mono",monospace';
+  ctx.fillText('这，就是微分的全部秘密', W/2, H*0.72+110);
+  if(t>0.5){ ctx.globalAlpha=Math.min(1,(t-0.5)/0.3); ctx.fillStyle='#8a8a9a'; ctx.font='500 22px "JetBrains Mono",monospace';
+    ctx.fillText('关注 · 每天一个可视化概念', W/2, H*0.90); }
+  ctx.restore();
+}
+
+document.getElementById('reset').addEventListener('click', ()=>setFrame(0));
+
+const EXPORT_MODE = new URLSearchParams(location.search).get('export') === '1';
+if(EXPORT_MODE){
+  const stage=document.getElementById('stage');
+  stage.style.width='1920px'; stage.style.maxWidth='none'; stage.style.height='1080px';
+  stage.style.aspectRatio='auto'; stage.style.border='none'; stage.style.borderRadius='0'; stage.style.boxShadow='none';
+  document.body.style.margin='0';
+  document.getElementById('controls').style.display='none';
+  document.querySelector('.tag').style.display='none';
+  resize();
+  window.__renderFrame=(n)=>{setFrame(n);};
+  setFrame(0);
+} else {
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

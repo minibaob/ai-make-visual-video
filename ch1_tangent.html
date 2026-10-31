@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>切线问题：导数就是斜率</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> CH1 / 切线问题：导数就是斜率</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){const s=document.getElementById('stage');const r=s.getBoundingClientRect();W=Math.round(r.width);H=Math.round(r.height);cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30;
+const INTRO_END=90, MAIN_END=2600, OUTRO_END=2700; // 90s 章节
+let frame=0;
+
+const XMIN=-2.2,XMAX=2.2,YMIN=-2.6,YMAX=2.6;
+function f(x){return x*x*x-2*x;}
+function fp(x){return 3*x*x-2;}
+function toPx(x,y){return [(x-XMIN)/(XMAX-XMIN)*W,(YMAX-y)/(YMAX-YMIN)*H];}
+
+// 阶段：0 割线展示(点移动)，1 割线收敛成切线，2 切线强调
+let a=-1.6, h=0.9, phase=0;
+
+function setFrame(n){
+  frame=n;
+  const t=n-INTRO_END;
+  if(t<0){a=-1.6;h=0.9;phase=0;}
+  else if(t<1200){ // 0-40s 点移动+割线
+    phase=0;a=-1.6+3.2*(t/1200);h=0.9;
+  }else if(t<1500){ // 40-50s 割线收敛
+    phase=1;a=1.6;h=0.9-0.88*((t-1200)/300);
+  }else{ // 50s后 切线强调
+    phase=2;a=1.6;h=0.02;
+  }
+  draw();
+}
+const state={last:0};
+function loop(ts){const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;frame+=dt*FPS;if(frame>OUTRO_END+30)frame=0;setFrame(Math.floor(frame));requestAnimationFrame(loop);}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  // 网格
+  ctx.save();
+  ctx.strokeStyle='rgba(140,140,180,0.12)';ctx.lineWidth=1;
+  for(let x=Math.ceil(XMIN);x<=XMAX;x++){if(Math.abs(x)<1e-9)continue;const [px]=toPx(x,0);ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,H);ctx.stroke();}
+  for(let y=Math.ceil(YMIN);y<=YMAX;y++){const [,py]=toPx(0,y);ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(W,py);ctx.stroke();}
+  ctx.strokeStyle='rgba(180,180,210,0.35)';ctx.lineWidth=1.4;
+  const [ox]=toPx(0,0),[,oy]=toPx(0,0);
+  ctx.beginPath();ctx.moveTo(0,oy);ctx.lineTo(W,oy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(ox,0);ctx.lineTo(ox,H);ctx.stroke();
+  ctx.restore();
+  // 刻度数字
+  ctx.save();
+  ctx.font='500 15px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
+  for(let x=-2;x<=2;x++){if(x===0)continue;ctx.fillText(x,toPx(x,0)[0],toPx(0,0)[1]+5);}
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let y=-2;y<=2;y++){if(y===0)continue;ctx.fillText(y,toPx(0,0)[0]-6,toPx(0,y)[1]);}
+  ctx.textAlign='right';ctx.textBaseline='top';ctx.fillText('0',toPx(0,0)[0]-6,toPx(0,0)[1]+5);
+  ctx.restore();
+
+  // 曲线
+  ctx.save();
+  ctx.strokeStyle='#58C4DD';ctx.lineWidth=4;ctx.lineJoin='round';
+  ctx.shadowColor='rgba(88,196,221,0.5)';ctx.shadowBlur=12;
+  ctx.beginPath();
+  for(let i=0;i<=400;i++){const x=XMIN+(XMAX-XMIN)*i/400;const [px,py]=toPx(x,f(x));if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+  ctx.stroke();ctx.restore();
+
+  const [ax,ay]=toPx(a,f(a));
+  // 割线
+  if(phase<2 || h>0.05){
+    const b=a+h;const [bx,by]=toPx(b,f(b));
+    const slope=(f(b)-f(a))/h;
+    line(ax,ay,slope,'rgba(255,107,107,0.85)',3);
+    dot(ax,ay,'#FF6B6B',6);dot(bx,by,'#FF6B6B',6);
+    if(phase===0){label('a',ax,ay,'#FF6B6B');label('a+h',bx,by,'#FF6B6B');}
+  }
+  // 切线
+  const slope=fp(a);
+  line(ax,ay,slope,'rgba(255,217,61,0.95)',4);
+  dot(ax,ay,'#FFD93D',8);
+  label('P',ax,ay,'#FFD93D');
+  // 斜率三角形
+  if(phase>=1) slopeTriangle(ax,ay,slope);
+
+  // 顶部文字
+  ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillText('切线问题：导数就是斜率',28,52);
+  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  if(frame<INTRO_END) ctx.fillText('平均速度 vs 瞬时速度',28,138);
+  else if(phase===0) ctx.fillText('割线 = 平均变化率',28,138);
+  else if(phase===1) ctx.fillText('h 越来越小，割线旋转……',28,138);
+  else ctx.fillText('切线斜率 = 瞬时变化率 = 导数',28,138);
+  ctx.restore();
+
+  if(frame<INTRO_END) drawIntro(frame/INTRO_END);
+  if(frame>=MAIN_END) drawOutro((frame-MAIN_END)/(OUTRO_END-MAIN_END));
+}
+
+function line(px,py,slope,color,width){
+  const L=2000,dx=L/Math.sqrt(1+slope*slope),dy=slope*dx;
+  ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(px-dx,py+dy);ctx.lineTo(px+dx,py-dy);ctx.stroke();ctx.restore();
+}
+function dot(px,py,color,r){ctx.save();ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=10;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();ctx.restore();}
+function label(txt,px,py,color){ctx.save();ctx.font='500 16px "JetBrains Mono",monospace';ctx.fillStyle=color;ctx.textAlign='left';ctx.textBaseline='bottom';ctx.fillText(txt,px+10,py-8);ctx.restore();}
+function slopeTriangle(px,py,slope){
+  const run=50,rise=slope*run;
+  ctx.save();ctx.strokeStyle='rgba(255,217,61,0.8)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+run,py);ctx.lineTo(px+run,py-rise);ctx.stroke();
+  ctx.fillStyle='rgba(255,217,61,0.9)';ctx.font='500 15px "JetBrains Mono",monospace';ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillText('Δy',px+run+8,py-rise/2);ctx.fillText('Δx',px+run/2-10,py+10);ctx.restore();
+}
+
+function drawIntro(t){
+  ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
+  const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillText('第 一 章 · 切 线 问 题',W/2,H*0.42);
+  ctx.fillStyle='#FFFFFF';ctx.font='700 50px "JetBrains Mono",monospace';
+  ctx.fillText('导数，就是切线的斜率',W/2,H*0.52);
+  ctx.restore();
+}
+function drawOutro(t){
+  ctx.save();const grad=ctx.createLinearGradient(0,H*0.35,0,H);grad.addColorStop(0,'rgba(10,10,15,0)');grad.addColorStop(1,'rgba(10,10,15,0.92)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#FFD93D';ctx.font='700 40px "JetBrains Mono",monospace';
+  ctx.fillText('导数 = 变化率',W/2,H*0.72);
+  ctx.restore();
+}
+
+document.getElementById('reset').addEventListener('click',()=>setFrame(0));
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';document.getElementById('controls').style.display='none';document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>

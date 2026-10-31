@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>e 为什么是复利之王</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> COMPOUND INTEREST / e 的诞生</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){const s=document.getElementById('stage');const r=s.getBoundingClientRect();W=Math.round(r.width);H=Math.round(r.height);cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30;
+const INTRO_END=75, P0_END=200, P1_END=360, P2_END=430, OUTRO_END=510;
+let frame=0;
+const E = Math.E;
+
+function setFrame(n){frame=n;draw();}
+const state={last:0};
+function loop(ts){const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;frame+=dt*FPS;if(frame>OUTRO_END+30)frame=0;setFrame(Math.floor(frame));requestAnimationFrame(loop);}
+
+// 当前复利期数 n（随阶段从 1 增长到很大）
+function nCurrent(){
+  if(frame<INTRO_END) return 1;
+  if(frame<P0_END){ // 1 -> 12 逐月
+    return 1 + (frame-INTRO_END)/(P0_END-INTRO_END)*11;
+  }
+  if(frame<P1_END){ // 12 -> 100000 指数增长（快）
+    const t=(frame-P0_END)/(P1_END-P0_END);
+    return 12 * Math.pow(100000/12, t);
+  }
+  return 100000;
+}
+function amount(n){ return Math.pow(1+1/n, n); }
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const n = nCurrent();
+  const val = amount(n);
+
+  // 左侧：复利数值展示（大数字 + 逼近 e）
+  // 右侧：增长曲线 (1+1/x)^x，x 从 1 到 100000
+
+  // 网格（右侧曲线区）
+  ctx.save(); ctx.strokeStyle='rgba(140,140,180,0.12)'; ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){const yy=H*0.2 + (H*0.65)*i/5;ctx.beginPath();ctx.moveTo(W*0.45,yy);ctx.lineTo(W*0.95,yy);ctx.stroke();}
+  for(let i=0;i<=5;i++){const xx=W*0.45+(W*0.5)*i/5;ctx.beginPath();ctx.moveTo(xx,H*0.2);ctx.lineTo(xx,H*0.85);ctx.stroke();}
+  ctx.restore();
+
+  // e 的渐近线（右侧曲线区，绿色虚线）
+  const curveX0=W*0.45, curveX1=W*0.95, curveY0=H*0.85, curveY1=H*0.2;
+  const yE = curveY0 - (E-1)/(3-1)*(curveY0-curveY1);  // 把 1~3 映射到曲线区
+  ctx.save();
+  ctx.strokeStyle='rgba(131,193,103,0.6)'; ctx.lineWidth=2; ctx.setLineDash([8,6]);
+  ctx.beginPath(); ctx.moveTo(curveX0, yE); ctx.lineTo(curveX1, yE); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#83C167'; ctx.font='500 16px "JetBrains Mono",monospace'; ctx.textAlign='right';
+  ctx.fillText('e ≈ 2.71828', curveX1-8, yE-8);
+  ctx.restore();
+
+  // 增长曲线 (1+1/x)^x 从 x=1 到 x=当前 n
+  ctx.save(); ctx.strokeStyle='#FFD93D'; ctx.lineWidth=4; ctx.lineJoin='round';
+  ctx.shadowColor='rgba(255,217,61,0.5)'; ctx.shadowBlur=12;
+  ctx.beginPath();
+  const xMax = Math.max(3, n);
+  const logX0=Math.log(1), logXMax=Math.log(Math.max(100000, n));
+  const N=400;
+  for(let i=0;i<=N;i++){
+    const lg=logX0+(logXMax-logX0)*i/N;
+    const x=Math.exp(lg);
+    if(x>n && i>1) break;
+    const y=amount(x);
+    const cx=curveX0 + (lg-logX0)/(logXMax-logX0)*(curveX1-curveX0);
+    const cy=curveY0 - (y-1)/(3-1)*(curveY0-curveY1);
+    if(i===0)ctx.moveTo(cx,cy);else ctx.lineTo(cx,cy);
+  }
+  ctx.stroke(); ctx.restore();
+
+  // 当前点
+  const cxN = curveX0 + (Math.log(n)-logX0)/(logXMax-logX0)*(curveX1-curveX0);
+  const cyN = curveY0 - (val-1)/(3-1)*(curveY0-curveY1);
+  ctx.save(); ctx.fillStyle='#FFD93D'; ctx.shadowColor='#FFD93D'; ctx.shadowBlur=14;
+  ctx.beginPath(); ctx.arc(cxN,cyN,8,0,Math.PI*2); ctx.fill(); ctx.restore();
+
+  // 左侧大数字
+  ctx.save();
+  ctx.textAlign='left';
+  ctx.fillStyle='#8a8a9a'; ctx.font='500 20px "JetBrains Mono",monospace';
+  ctx.fillText(`本金 1 元 · 年利率 100%`, W*0.06, H*0.30);
+  ctx.fillText(`分 ${Math.round(n).toLocaleString()} 期复利`, W*0.06, H*0.30+32);
+  ctx.fillStyle='#FFFFFF'; ctx.font='700 52px "JetBrains Mono",monospace';
+  ctx.fillText(val.toFixed(5), W*0.06, H*0.46);
+  ctx.fillStyle='#8a8a9a'; ctx.font='500 22px "JetBrains Mono",monospace';
+  ctx.fillText('元', W*0.06+280, H*0.46);
+  // 逼近 e 的差距
+  ctx.fillStyle='#83C167'; ctx.font='500 20px "JetBrains Mono",monospace';
+  const gap = Math.abs(E - val);
+  ctx.fillText(`距 e 还差 ${gap < 1e-5 ? '→ 0' : gap.toExponential(2)}`, W*0.06, H*0.56);
+  ctx.restore();
+
+  // 顶部标题
+  ctx.save(); ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.font='600 22px "JetBrains Mono",monospace';
+  ctx.fillText('(1 + 1/n)ⁿ  →  e', 20, 46);
+  ctx.font='500 17px "JetBrains Mono",monospace';
+  if(frame<INTRO_END){ ctx.fillStyle='#EAEAEA'; ctx.fillText('复利次数越多，赚得越多？',20,74); }
+  else if(frame<P0_END){ ctx.fillStyle='#FFD93D'; ctx.fillText('从年复利到月复利……',20,74); }
+  else if(frame<P1_END){ ctx.fillStyle='#FFD93D'; ctx.fillText('复利无限细分，逼近一个神秘数字',20,74); }
+  else { ctx.fillStyle='#83C167'; ctx.fillText('它收敛到 e —— 不是无穷大！',20,74); }
+  ctx.restore();
+
+  if(frame<INTRO_END) drawIntro(frame/INTRO_END);
+  if(frame>=P2_END) drawOutro((frame-P2_END)/(OUTRO_END-P2_END));
+}
+
+function drawIntro(t){
+  ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
+  const ease=t<0.25?0:Math.min(1,(t-0.25)/0.5);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#58C4DD';ctx.font='500 22px "JetBrains Mono",monospace';
+  ctx.fillText('数 学 常 数 e', W/2, H*0.36);
+  ctx.fillStyle='#FFFFFF';ctx.font='700 52px "JetBrains Mono",monospace';
+  ctx.fillText('e 为什么被称为', W/2, H*0.48);
+  ctx.fillStyle='#FFD93D';
+  ctx.fillText('「 复 利 之 王 」', W/2, H*0.48+68);
+  ctx.restore();
+}
+function drawOutro(t){
+  ctx.save();
+  const grad=ctx.createLinearGradient(0,H*0.35,0,H);grad.addColorStop(0,'rgba(10,10,15,0)');grad.addColorStop(1,'rgba(10,10,15,0.92)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 44px "JetBrains Mono",monospace';
+  ctx.fillText('e = lim (1 + 1/n)ⁿ', W/2, H*0.70);
+  ctx.fillStyle='#83C167';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillText('n→∞', W/2, H*0.70+48);
+  ctx.fillStyle='#FFD93D';ctx.font='600 28px "JetBrains Mono",monospace';
+  ctx.fillText('复利的尽头，是 e', W/2, H*0.70+104);
+  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 22px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
+  ctx.restore();
+}
+
+document.getElementById('reset').addEventListener('click',()=>setFrame(0));
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';document.getElementById('controls').style.display='none';document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>

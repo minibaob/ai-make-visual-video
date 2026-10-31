@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>放大直觉：微分的本质</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> CH2 / 放大直觉：微分的本质</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){const s=document.getElementById('stage');const r=s.getBoundingClientRect();W=Math.round(r.width);H=Math.round(r.height);cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30;
+const INTRO_END=90, MAIN_END=2600, OUTRO_END=2700;
+let frame=0;
+
+const X0=1.0;
+function f(x){return x*x;}
+function fp(x){return 2*x;}
+
+function zoomLevel(){
+  if(frame<INTRO_END) return 1;
+  const t=(frame-INTRO_END)/(MAIN_END-INTRO_END);
+  if(t<0.25) return 1;
+  if(t<0.55) return 1+(t-0.25)/0.3*9;
+  return 10+(t-0.55)/0.45*90;
+}
+function span(){return 3.0/zoomLevel();}
+
+function setFrame(n){frame=n;draw();}
+const state={last:0};
+function loop(ts){const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;frame+=dt*FPS;if(frame>OUTRO_END+30)frame=0;setFrame(Math.floor(frame));requestAnimationFrame(loop);}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const z=zoomLevel(),sp=span();
+
+  // 网格（自适应步长）
+  ctx.save();
+  ctx.strokeStyle='rgba(140,140,180,0.12)';ctx.lineWidth=1;
+  const pow=Math.pow(10,Math.round(Math.log10(sp/5)));
+  const step=Math.max(pow/10,sp/8);
+  for(let gx=X0-sp;gx<=X0+sp;gx+=step){const px=W/2+(gx-X0)/sp*(W/2);ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,H);ctx.stroke();}
+  for(let gy=f(X0)-sp*3;gy<=f(X0)+sp*3;gy+=step){const py=H/2-(gy-f(X0))/sp*(H/2);ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(W,py);ctx.stroke();}
+  ctx.strokeStyle='rgba(180,180,210,0.35)';ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();
+  ctx.restore();
+
+  // 刻度数字
+  ctx.save();
+  ctx.font='500 15px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
+  for(let k=-6;k<=6;k++){const x=X0+k*step;const px=W/2+(x-X0)/sp*(W/2);if(px<0||px>W)continue;if(Math.abs(x-X0)<step*0.01)continue;ctx.fillText(fmt(x),px,H/2+5);}
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let k=-6;k<=6;k++){const y=f(X0)+k*step;const py=H/2-(y-f(X0))/sp*(H/2);if(py<0||py>H)continue;if(Math.abs(y-f(X0))<step*0.01)continue;ctx.fillText(fmt(y),W/2-6,py);}
+  ctx.restore();
+
+  // 曲线
+  ctx.save();ctx.strokeStyle='#58C4DD';ctx.lineWidth=5;ctx.lineJoin='round';ctx.shadowColor='rgba(88,196,221,0.6)';ctx.shadowBlur=24;ctx.beginPath();
+  for(let i=0;i<=400;i++){const x=X0-sp+2*sp*i/400;const px=W/2+(x-X0)/sp*(W/2);const py=H/2-(f(x)-f(X0))/sp*(H/2);if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+  ctx.stroke();ctx.restore();
+
+  // 切线
+  const slope=fp(X0);
+  ctx.save();ctx.strokeStyle='rgba(255,217,61,0.9)';ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(0,H/2-slope*(-sp)/sp*(H/2));ctx.lineTo(W,H/2-slope*(sp)/sp*(H/2));ctx.stroke();ctx.restore();
+  ctx.save();ctx.fillStyle='#FFD93D';ctx.shadowColor='#FFD93D';ctx.shadowBlur=14;ctx.beginPath();ctx.arc(W/2,H/2,9,0,Math.PI*2);ctx.fill();ctx.restore();
+
+  // 误差测量
+  const xEdge=X0+sp*0.35;const yC=f(xEdge),yL=f(X0)+slope*(xEdge-X0);
+  const pxE=W/2+(xEdge-X0)/sp*(W/2);const pyC=H/2-(yC-f(X0))/sp*(H/2);const pyL=H/2-(yL-f(X0))/sp*(H/2);
+  ctx.save();ctx.strokeStyle='#FF6B6B';ctx.lineWidth=3;ctx.setLineDash([6,5]);
+  ctx.beginPath();ctx.moveTo(pxE,pyC);ctx.lineTo(pxE,pyL);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#FF8A8A';ctx.font='600 18px "JetBrains Mono",monospace';ctx.textAlign='left';
+  const err=Math.abs(yC-yL);
+  ctx.fillText(err<1e-9?'误差→0':`误差 ${err.toFixed(3)}`,pxE+8,(pyC+pyL)/2);ctx.restore();
+
+  // 顶部文字
+  ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillText('放大直觉：微分的本质',28,52);
+  ctx.font='700 30px "JetBrains Mono",monospace';ctx.fillStyle='#FFD93D';
+  ctx.fillText(`放大 ${z.toFixed(0)} 倍`,28,96);
+  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  if(frame<INTRO_END) ctx.fillText('盯着 x=1，不断放大……',28,138);
+  else if(z<10) ctx.fillText('曲线开始变直',28,138);
+  else ctx.fillText('曲线 ≈ 切线（局部线性）',28,138);
+  ctx.restore();
+
+  if(frame<INTRO_END) drawIntro(frame/INTRO_END);
+  if(frame>=MAIN_END) drawOutro((frame-MAIN_END)/(OUTRO_END-MAIN_END));
+}
+
+function fmt(v){const a=Math.abs(v);if(a===0)return'0';if(a>=1000||a<0.001)return v.toExponential(0);if(a>=1)return v.toFixed(Math.min(2,Math.max(0,2-Math.floor(Math.log10(a)))));return v.toFixed(Math.min(4,Math.ceil(-Math.log10(a))+1));}
+
+function drawIntro(t){
+  ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
+  const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillText('第 二 章 · 放 大 直 觉',W/2,H*0.42);
+  ctx.fillStyle='#FFFFFF';ctx.font='700 50px "JetBrains Mono",monospace';
+  ctx.fillText('放大之后，曲线变直了',W/2,H*0.52);
+  ctx.restore();
+}
+function drawOutro(t){
+  ctx.save();const grad=ctx.createLinearGradient(0,H*0.35,0,H);grad.addColorStop(0,'rgba(10,10,15,0)');grad.addColorStop(1,'rgba(10,10,15,0.92)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#83C167';ctx.font='700 40px "JetBrains Mono",monospace';
+  ctx.fillText('局部线性：微分的灵魂',W/2,H*0.72);
+  ctx.restore();
+}
+
+document.getElementById('reset').addEventListener('click',()=>setFrame(0));
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';document.getElementById('controls').style.display='none';document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>

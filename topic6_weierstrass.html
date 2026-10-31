@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>处处连续却处处不可导</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> WEIERSTRASS / 处处连续处处不可导</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){const s=document.getElementById('stage');const r=s.getBoundingClientRect();W=Math.round(r.width);H=Math.round(r.height);cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30;
+const INTRO_END=75, P0_END=150, P1_END=300, P2_END=450, P3_END=600, OUTRO_END=690;
+let frame=0;
+
+// 魏尔斯特拉斯函数：f(x) = Σ a^n cos(b^n π x)，a=0.5, b=3
+const A=0.5, B=3;
+function weierstrass(x, N){
+  let s=0;
+  for(let n=0;n<N;n++) s += Math.pow(A,n)*Math.cos(Math.pow(B,n)*Math.PI*x);
+  return s;
+}
+
+// 当前叠加项数 N（随阶段递增）
+function Ncurrent(){
+  if(frame<INTRO_END) return 1;
+  if(frame<P0_END) return 1;
+  if(frame<P1_END){ return 1 + Math.floor((frame-P0_END)/(P1_END-P0_END)*2); } // 1->3
+  if(frame<P2_END){ return 3 + Math.floor((frame-P1_END)/(P2_END-P1_END)*4); } // 3->7
+  if(frame<P3_END){ return 7 + Math.floor((frame-P2_END)/(P3_END-P2_END)*3); } // 7->10
+  return 10;
+}
+
+function setFrame(n){frame=n;draw();}
+const state={last:0};
+function loop(ts){const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;frame+=dt*FPS;if(frame>OUTRO_END+30)frame=0;setFrame(Math.floor(frame));requestAnimationFrame(loop);}
+
+// 世界坐标
+const XMIN=-2, XMAX=2, YMIN=-2.2, YMAX=2.2;
+function PX(x){return (x-XMIN)/(XMAX-XMIN)*W;}
+function PY(y){return (YMAX-y)/(YMAX-YMIN)*H;}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const N=Ncurrent();
+
+  // 网格 + 坐标轴
+  ctx.save();
+  ctx.strokeStyle='rgba(140,140,180,0.12)';ctx.lineWidth=1;
+  for(let x=Math.ceil(XMIN);x<=XMAX;x++){if(Math.abs(x)<1e-6)continue;ctx.beginPath();ctx.moveTo(PX(x),0);ctx.lineTo(PX(x),H);ctx.stroke();}
+  for(let y=Math.ceil(YMIN);y<=YMAX;y++){ctx.beginPath();ctx.moveTo(0,PY(y));ctx.lineTo(W,PY(y));ctx.stroke();}
+  ctx.strokeStyle='rgba(180,180,210,0.35)';ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(0,PY(0));ctx.lineTo(W,PY(0));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(PX(0),0);ctx.lineTo(PX(0),H);ctx.stroke();
+  ctx.restore();
+
+  // 刻度数字（固定范围，不用自适应，因为这里不缩放）
+  ctx.save();
+  ctx.font='500 15px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
+  for(let x=-2;x<=2;x++){ if(x===0)continue; ctx.fillText(x, PX(x), PY(0)+5); }
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let y=-2;y<=2;y++){ if(y===0)continue; ctx.fillText(y, PX(0)-6, PY(y)); }
+  ctx.textAlign='right';ctx.textBaseline='top';ctx.fillText('0',PX(0)-6,PY(0)+5);
+  ctx.restore();
+
+  // 魏尔斯特拉斯曲线（随 N 递增越来越毛糙）
+  ctx.save();
+  ctx.strokeStyle='#58C4DD';ctx.lineWidth=2.5;ctx.lineJoin='round';
+  ctx.shadowColor='rgba(88,196,221,0.6)';ctx.shadowBlur=14;
+  ctx.beginPath();
+  const NP=1200; // 高采样，捕捉高频毛糙
+  for(let i=0;i<=NP;i++){
+    const x=XMIN+(XMAX-XMIN)*i/NP;
+    const y=weierstrass(x,N);
+    const px=PX(x), py=PY(y);
+    if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+  }
+  ctx.stroke();ctx.restore();
+
+  // 顶部文字
+  ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillText('f(x) = Σ 0.5ⁿ · cos(3ⁿπx)', 28, 52);
+  ctx.font='700 30px "JetBrains Mono",monospace';ctx.fillStyle='#FFD93D';
+  ctx.fillText(`叠加 ${N} 项`, 28, 96);
+  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  if(frame<P0_END) ctx.fillText('先看第 1 项：一条平滑的余弦',28,138);
+  else if(frame<P1_END) ctx.fillText('叠加高频项……曲线开始长"尖角"',28,138);
+  else if(frame<P2_END) ctx.fillText('尖角越来越多，越来越密',28,138);
+  else ctx.fillText('无限叠加 → 处处连续，却处处不可导',28,138);
+  ctx.restore();
+
+  if(frame<INTRO_END) drawIntro(frame/INTRO_END);
+  if(frame>=P3_END) drawOutro((frame-P3_END)/(OUTRO_END-P3_END));
+}
+
+function drawIntro(t){
+  ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
+  const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillText('数 学 怪 物 · 分 形', W/2, H*0.34);
+  ctx.fillStyle='#FFFFFF';ctx.font='700 52px "JetBrains Mono",monospace';
+  ctx.fillText('一条处处连续、', W/2, H*0.46);
+  ctx.fillStyle='#FFD93D';
+  ctx.fillText('却处处没有导数的曲线', W/2, H*0.46+62);
+  ctx.restore();
+}
+function drawOutro(t){
+  ctx.save();
+  const grad=ctx.createLinearGradient(0,H*0.35,0,H);grad.addColorStop(0,'rgba(10,10,15,0)');grad.addColorStop(1,'rgba(10,10,15,0.92)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 42px "JetBrains Mono",monospace';
+  ctx.fillText('放大任何一处，全是尖角', W/2, H*0.70);
+  ctx.fillStyle='#83C167';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillText('它处处连续，却没有一处光滑', W/2, H*0.70+44);
+  ctx.fillStyle='#FFD93D';ctx.font='600 28px "JetBrains Mono",monospace';
+  ctx.fillText('微积分的直觉，在这里失效了', W/2, H*0.70+100);
+  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 22px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
+  ctx.restore();
+}
+
+document.getElementById('reset').addEventListener('click',()=>setFrame(0));
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';document.getElementById('controls').style.display='none';document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>

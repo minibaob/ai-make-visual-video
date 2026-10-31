@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>极限的定义：ε-δ</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> CH3 / 极限的定义：ε-δ</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){const s=document.getElementById('stage');const r=s.getBoundingClientRect();W=Math.round(r.width);H=Math.round(r.height);cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30;
+const INTRO_END=90, MAIN_END=2600, OUTRO_END=2700;
+let frame=0;
+
+const XMIN=-3.2,XMAX=3.2,YMIN=-0.5,YMAX=2.5;
+function f(x){return 1+0.5*Math.sin(3*x)+0.3*x;}
+function px(x){return (x-XMIN)/(XMAX-XMIN)*W;}
+function py(y){return (YMAX-y)/(YMAX-YMIN)*H;}
+
+function epsilon(){
+  if(frame<INTRO_END) return 0.4;
+  const t=(frame-INTRO_END)/(MAIN_END-INTRO_END);
+  return 0.4 - t*0.35; // 0.4 -> 0.05
+}
+function delta(){return epsilon()*0.6;}
+
+function setFrame(n){frame=n;draw();}
+const state={last:0};
+function loop(ts){const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;frame+=dt*FPS;if(frame>OUTRO_END+30)frame=0;setFrame(Math.floor(frame));requestAnimationFrame(loop);}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const eps=epsilon(), del=delta();
+
+  // 网格+轴
+  ctx.save();
+  ctx.strokeStyle='rgba(140,140,180,0.12)';ctx.lineWidth=1;
+  for(let x=Math.ceil(XMIN);x<=XMAX;x++){if(Math.abs(x)<1e-6)continue;ctx.beginPath();ctx.moveTo(px(x),0);ctx.lineTo(px(x),H);ctx.stroke();}
+  for(let y=Math.ceil(YMIN);y<=YMAX;y++){ctx.beginPath();ctx.moveTo(0,py(y));ctx.lineTo(W,py(y));ctx.stroke();}
+  ctx.strokeStyle='rgba(180,180,210,0.35)';ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(px(0),0);ctx.lineTo(px(0),H);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,py(0));ctx.lineTo(W,py(0));ctx.stroke();
+  ctx.restore();
+  // 刻度
+  ctx.save();
+  ctx.font='500 15px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
+  for(let x=-3;x<=3;x++){if(x===0)continue;ctx.fillText(x,px(x),py(0)+5);}
+  ctx.textAlign='right';ctx.textBaseline='middle';
+  for(let y=1;y<=2;y++){ctx.fillText(y,px(0)-6,py(y));}
+  ctx.restore();
+
+  // 曲线
+  ctx.save();ctx.strokeStyle='#58C4DD';ctx.lineWidth=4;ctx.lineJoin='round';ctx.shadowColor='rgba(88,196,221,0.5)';ctx.shadowBlur=12;ctx.beginPath();
+  for(let i=0;i<=400;i++){const x=XMIN+(XMAX-XMIN)*i/400;const yy=py(f(x));if(i===0)ctx.moveTo(px(x),yy);else ctx.lineTo(px(x),yy);}
+  ctx.stroke();ctx.restore();
+
+  // ε 带（黄）
+  ctx.save();
+  ctx.fillStyle='rgba(255,217,61,0.12)';
+  ctx.fillRect(0,py(1+eps),W,py(1-eps)-py(1+eps));
+  ctx.strokeStyle='rgba(255,217,61,0.6)';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+  ctx.beginPath();ctx.moveTo(0,py(1+eps));ctx.lineTo(W,py(1+eps));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,py(1-eps));ctx.lineTo(W,py(1-eps));ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#FFD93D';ctx.font='500 16px "JetBrains Mono",monospace';ctx.textAlign='left';
+  ctx.fillText(`ε=${eps.toFixed(3)}`,12,py(1+eps)-6);
+  ctx.restore();
+
+  // δ 带（蓝）
+  ctx.save();
+  ctx.fillStyle='rgba(88,196,221,0.10)';
+  ctx.fillRect(px(-del),0,px(del)-px(-del),H);
+  ctx.strokeStyle='rgba(88,196,221,0.6)';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+  ctx.beginPath();ctx.moveTo(px(-del),0);ctx.lineTo(px(-del),H);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(px(del),0);ctx.lineTo(px(del),H);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#58C4DD';ctx.font='500 16px "JetBrains Mono",monospace';
+  ctx.fillText(`δ=${del.toFixed(3)}`,px(del)+6,py(2.4));
+  ctx.restore();
+
+  // 极限点 L
+  ctx.save();
+  ctx.fillStyle='#FFD93D';ctx.shadowColor='#FFD93D';ctx.shadowBlur=12;
+  ctx.beginPath();ctx.arc(px(0),py(1),7,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(px(0),py(1),12,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='500 16px "JetBrains Mono",monospace';ctx.textAlign='left';
+  ctx.fillText('L',px(0)+16,py(1)-10);
+  ctx.restore();
+
+  // 顶部文字
+  ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillText('极限的定义：ε-δ',28,52);
+  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  if(frame<INTRO_END) ctx.fillText('"无限接近"到底怎么精确刻画？',28,138);
+  else if(eps>0.2) ctx.fillText('任给 ε，都能找到 δ',28,138);
+  else ctx.fillText('ε 可以任意小 → 这才是"接近"',28,138);
+  ctx.restore();
+
+  if(frame<INTRO_END) drawIntro(frame/INTRO_END);
+  if(frame>=MAIN_END) drawOutro((frame-MAIN_END)/(OUTRO_END-MAIN_END));
+}
+
+function drawIntro(t){
+  ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
+  const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillText('第 三 章 · 极 限 的 定 义',W/2,H*0.42);
+  ctx.fillStyle='#FFFFFF';ctx.font='700 50px "JetBrains Mono",monospace';
+  ctx.fillText('补上严谨性的那块拼图',W/2,H*0.52);
+  ctx.restore();
+}
+function drawOutro(t){
+  ctx.save();const grad=ctx.createLinearGradient(0,H*0.35,0,H);grad.addColorStop(0,'rgba(10,10,15,0)');grad.addColorStop(1,'rgba(10,10,15,0.92)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#83C167';ctx.font='700 40px "JetBrains Mono",monospace';
+  ctx.fillText('∀ ε>0, ∃ δ>0',W/2,H*0.72);
+  ctx.fillStyle='#EAEAEA';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillText('微积分的地基，从此稳固',W/2,H*0.72+46);
+  ctx.restore();
+}
+
+document.getElementById('reset').addEventListener('click',()=>setFrame(0));
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';document.getElementById('controls').style.display='none';document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>

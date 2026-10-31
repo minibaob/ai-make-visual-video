@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>微积分基本定理</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> CH6 / 微积分基本定理</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){const s=document.getElementById('stage');const r=s.getBoundingClientRect();W=Math.round(r.width);H=Math.round(r.height);cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30;
+// 120s 章节（全片高潮）：0-3 引入，3-20 左切线右面积，20-110 两者靠拢合并，110-120 等号
+const INTRO_END=90, P0_END=600, P1_END=3300, OUTRO_END=3600;
+let frame=0;
+
+function f(x){ return x*x; }  // 用 x² 做例子，原函数 x³/3
+
+function setFrame(n){frame=n;draw();}
+const state={last:0};
+function loop(ts){const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;frame+=dt*FPS;if(frame>OUTRO_END+30)frame=0;setFrame(Math.floor(frame));requestAnimationFrame(loop);}
+
+// 合并进度：0=左右分开，1=完全合并成"互逆"
+function merge(){
+  if(frame<P0_END) return 0;
+  if(frame<P1_END) return (frame-P0_END)/(P1_END-P0_END);
+  return 1;
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const m=merge();
+
+  // 左半：导数（切线）| 右半：积分（面积）
+  const leftCX=W*0.25, rightCX=W*0.75, cy=H*0.5, R=H*0.32;
+
+  ctx.save();
+  // 中间分隔线（随 merge 淡出）
+  ctx.strokeStyle=`rgba(180,180,210,${0.55*(1-m)})`;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(W/2, H*0.15);ctx.lineTo(W/2, H*0.85);ctx.stroke();
+  ctx.restore();
+
+  // ===== 左边：导数（切线）=====
+  const lx=leftCX, ly=cy;
+  const scale=H*0.30;
+  function fL(x){return x*x;}
+  function fpL(x){return 2*x;}
+  ctx.save();
+  ctx.strokeStyle='#58C4DD';ctx.lineWidth=3.5;ctx.lineJoin='round';
+  ctx.shadowColor='rgba(88,196,221,0.5)';ctx.shadowBlur=12;
+  ctx.beginPath();
+  for(let i=0;i<=200;i++){const x=-1.4+2.8*i/200;const px=lx+x/1.4*scale;const py=ly-fL(x)/2*scale;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+  ctx.stroke();
+  // 切线
+  const x0=0.7;const slope=fpL(x0);const tx=lx+x0/1.4*scale, ty=ly-fL(x0)/2*scale;
+  ctx.strokeStyle='rgba(255,217,61,0.9)';ctx.lineWidth=3.5;
+  const L=140;
+  ctx.beginPath();ctx.moveTo(tx-L,ty+slope*L/1.4*scale/2);ctx.lineTo(tx+L,ty-slope*L/1.4*scale/2);ctx.stroke();
+  ctx.fillStyle='#FFD93D';ctx.shadowColor='#FFD93D';ctx.shadowBlur=10;
+  ctx.beginPath();ctx.arc(tx,ty,7,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#FFD93D';ctx.font='700 26px "JetBrains Mono",monospace';ctx.textAlign='center';
+  ctx.fillText('微分', lx, H*0.12);
+  ctx.fillText('d/dx（变化率）', lx, H*0.88);
+  ctx.restore();
+
+  // ===== 右边：积分（面积）=====
+  const rx=rightCX, ry=cy;
+  function fR(x){return x*x;}
+  ctx.save();
+  ctx.strokeStyle='#58C4DD';ctx.lineWidth=3.5;ctx.lineJoin='round';
+  ctx.shadowColor='rgba(88,196,221,0.5)';ctx.shadowBlur=12;
+  ctx.beginPath();
+  for(let i=0;i<=200;i++){const x=0+1.4*i/200;const px=rx+x/1.4*scale;const py=ry-fR(x)/2*scale;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+  ctx.stroke();
+  // 面积填充（黎曼和近似）
+  const N=20;const dx=1.4/N;
+  for(let i=0;i<N;i++){const x=i*dx;const y=fR(x);const px1=rx+x/1.4*scale;const px2=rx+(x+dx)/1.4*scale;const pyTop=ry-y/2*scale;ctx.fillStyle='rgba(131,193,103,0.25)';ctx.fillRect(px1,pyTop,px2-px1,ry-pyTop);}
+  ctx.fillStyle='#83C167';ctx.font='700 26px "JetBrains Mono",monospace';ctx.textAlign='center';
+  ctx.fillText('积分', rx, H*0.12);
+  ctx.fillText('∫（累积）', rx, H*0.88);
+  ctx.restore();
+
+  // ===== 合并后：等号 + 互逆 =====
+  if(m>0.5){
+    ctx.save();
+    const alpha=(m-0.5)/0.5;
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle='#FFFFFF';ctx.font='700 60px "JetBrains Mono",monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('=', W/2, cy);
+    ctx.fillStyle='#FFD93D';ctx.font='700 44px "JetBrains Mono",monospace';
+    ctx.fillText('互 为 逆 运 算', W/2, H*0.80);
+    ctx.restore();
+  }
+
+  // 顶部文字
+  ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillText('微积分基本定理', 28, 52);
+  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  if(frame<INTRO_END) ctx.fillText('微分和积分，是什么关系？',28,138);
+  else if(m<0.5) ctx.fillText('一个讲变化，一个讲累积……',28,138);
+  else ctx.fillText('它们居然是同一枚硬币的两面',28,138);
+  ctx.restore();
+
+  if(frame<INTRO_END) drawIntro(frame/INTRO_END);
+  if(frame>=P1_END) drawOutro((frame-P1_END)/(OUTRO_END-P1_END));
+}
+
+function drawIntro(t){
+  ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
+  const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillText('第 六 章 · 微 积 分 基 本 定 理', W/2, H*0.4);
+  ctx.fillStyle='#FFFFFF';ctx.font='700 50px "JetBrains Mono",monospace';
+  ctx.fillText('微分和积分，是互逆的', W/2, H*0.5);
+  ctx.restore();
+}
+function drawOutro(t){
+  ctx.save();
+  const grad=ctx.createLinearGradient(0,H*0.35,0,H);grad.addColorStop(0,'rgba(10,10,15,0)');grad.addColorStop(1,'rgba(10,10,15,0.92)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#FFD93D';ctx.font='700 46px "JetBrains Mono",monospace';
+  ctx.fillText('d/dx ∫ f = f', W/2, H*0.70);
+  ctx.fillStyle='#83C167';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillText('微积分，就此统一', W/2, H*0.70+48);
+  ctx.restore();
+}
+
+document.getElementById('reset').addEventListener('click',()=>setFrame(0));
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';document.getElementById('controls').style.display='none';document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>为什么放大后曲线会变成直线</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> ZOOM / 局部放大与微分的几何直觉</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){const s=document.getElementById('stage');const r=s.getBoundingClientRect();W=Math.round(r.width);H=Math.round(r.height);cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30;
+// 放慢演示：放大过程从 8.3s 拉长到 14s，让观众看清"曲线逐渐变直"
+const INTRO_END=75, P0_END=180, P1_END=390, P2_END=600, OUTRO_END=690;
+let frame=0;
+
+// ===== 核心：视野半宽 span（zoom = 3.0/span）=====
+const X0=1.0;
+function f(x){return x*x;}
+function fp(x){return 2*x;}
+
+function zoomLevel(){
+  if(frame<P0_END) return 1;
+  if(frame<P1_END) return 1 + (frame-P0_END)/(P1_END-P0_END)*9;    // 1→10
+  if(frame<P2_END) return 10 + (frame-P1_END)/(P2_END-P1_END)*90;  // 10→100
+  return 100;
+}
+function span(){ return 3.0/zoomLevel(); }
+
+function setFrame(n){frame=n;draw();}
+const state={last:0};
+function loop(ts){const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;frame+=dt*FPS;if(frame>OUTRO_END+30)frame=0;setFrame(Math.floor(frame));requestAnimationFrame(loop);}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const z=zoomLevel();
+  const sp=span();
+
+  // ---- 网格（随视野缩放，密度自动变化）----
+  ctx.save();
+  ctx.strokeStyle='rgba(140,140,180,0.12)';ctx.lineWidth=1;
+  // 网格步长取 10 的幂附近的整齐数，保证放大后网格不糊
+  const pow=Math.pow(10,Math.round(Math.log10(sp/5)));
+  const step=Math.max(pow/10, sp/8);
+  for(let gx=X0-sp; gx<=X0+sp; gx+=step){
+    const px=W/2+(gx-X0)/sp*(W/2);
+    ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,H);ctx.stroke();
+  }
+  for(let gy=f(X0)-sp*3; gy<=f(X0)+sp*3; gy+=step){
+    const py=H/2-(gy-f(X0))/sp*(H/2);
+    ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(W,py);ctx.stroke();
+  }
+  ctx.restore();
+
+  // ---- 坐标轴 ----
+  ctx.save();
+  ctx.strokeStyle='rgba(180,180,210,0.3)';ctx.lineWidth=1.4;
+  ctx.beginPath();ctx.moveTo(0,H/2);ctx.lineTo(W,H/2);ctx.stroke();   // x 轴
+  ctx.beginPath();ctx.moveTo(W/2,0);ctx.lineTo(W/2,H);ctx.stroke();   // y 轴
+  ctx.restore();
+
+  // ---- 刻度数字标注（整齐步长，随放大自适应）----
+  drawAxisLabels(sp);
+
+  // ---- 曲线（世界坐标 → 屏幕，随 span 变化）----
+  ctx.save();
+  ctx.strokeStyle='#58C4DD';ctx.lineWidth=5;ctx.lineJoin='round';
+  ctx.shadowColor='rgba(88,196,221,0.6)';ctx.shadowBlur=24;
+  ctx.beginPath();
+  for(let i=0;i<=400;i++){
+    const x=X0-sp+2*sp*i/400;
+    const y=f(x);
+    const px=W/2+(x-X0)/sp*(W/2);
+    const py=H/2-(y-f(X0))/sp*(H/2);
+    if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+  }
+  ctx.stroke();ctx.restore();
+
+  // ---- 切线（黄色，过 X0 点，按当前 span 映射）----
+  const slope=fp(X0);
+  ctx.save();
+  ctx.strokeStyle='rgba(255,217,61,0.9)';ctx.lineWidth=4;
+  ctx.beginPath();
+  ctx.moveTo(0, H/2 - slope*(-X0+ (X0-sp))/sp*(H/2));  // 屏幕左端 x=X0-sp
+  ctx.lineTo(W, H/2 - slope*(X0+sp-X0)/sp*(H/2));      // 屏幕右端 x=X0+sp
+  ctx.stroke();ctx.restore();
+
+  // ---- 切点 ----
+  ctx.save();
+  ctx.fillStyle='#FFD93D';ctx.shadowColor='#FFD93D';ctx.shadowBlur=14;
+  ctx.beginPath();ctx.arc(W/2,H/2,9,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+
+  // ---- 误差测量：固定屏幕 40% 处（保证 y 在视野内），曲线与切线的差 ----
+  const xEdge=X0+sp*0.35;
+  const yC=f(xEdge), yL=f(X0)+slope*(xEdge-X0);
+  const pxE=W/2+(xEdge-X0)/sp*(W/2);
+  const pyC=H/2-(yC-f(X0))/sp*(H/2);
+  const pyL=H/2-(yL-f(X0))/sp*(H/2);
+  ctx.save();
+  ctx.strokeStyle='#FF6B6B';ctx.lineWidth=3;ctx.setLineDash([6,5]);
+  ctx.beginPath();ctx.moveTo(pxE,pyC);ctx.lineTo(pxE,pyL);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#FF6B6B';ctx.font='600 18px "JetBrains Mono",monospace';ctx.textAlign='left';
+  const err=Math.abs(yC-yL);
+  ctx.fillText(err<1e-9?'误差 → 0':`误差 ${err.toFixed(3)}`, pxE+8, (pyC+pyL)/2);
+  ctx.restore();
+
+  // ---- 左下角：视野框（直观展示"看到的其实只是一小段"）----
+  // 一个小框，宽度 = 当前视野，位置在左下角，示意"取景范围"
+  drawViewfinder(sp);
+
+  // ---- 顶部文字 ----
+  ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillText('f(x) = x²', 28, 52);
+  ctx.font='700 30px "JetBrains Mono",monospace';ctx.fillStyle='#FFD93D';
+  ctx.fillText(`放大 ${z.toFixed(0)} 倍`, 28, 96);
+  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  if(frame<P0_END) ctx.fillText('把镜头对准 x=1 附近，准备放大',28,138);
+  else if(frame<P1_END) ctx.fillText('局部拉近……曲线越来越像直线',28,138);
+  else ctx.fillText('曲线 ≈ 切线，这就是微分的秘密',28,138);
+  ctx.restore();
+
+  if(frame<INTRO_END) drawIntro(frame/INTRO_END);
+  if(frame>=P2_END) drawOutro((frame-P2_END)/(OUTRO_END-P2_END));
+}
+
+// 刻度数字标注：整齐步长（1/2/5 × 10^n），随放大自适应
+function niceStep(span, targetTicks=8){
+  // 目标：屏幕上约 targetTicks 个刻度
+  const raw = span*2 / targetTicks;   // 视野总宽 / 目标刻度数
+  const mag = Math.pow(10, Math.floor(Math.log10(raw))); // 数量级
+  const norm = raw / mag;
+  let step;
+  if(norm < 1.5) step = 1;
+  else if(norm < 3.5) step = 2;
+  else if(norm < 7.5) step = 5;
+  else step = 10;
+  return step * mag;
+}
+
+function fmtNum(v){
+  // 根据大小决定小数位数，避免长数字
+  const a = Math.abs(v);
+  if(a === 0) return '0';
+  if(a >= 1000 || a < 0.001) return v.toExponential(0);
+  if(a >= 1) return v.toFixed(Math.min(2, Math.max(0, 2-Math.floor(Math.log10(a)))));
+  return v.toFixed(Math.min(4, Math.ceil(-Math.log10(a))+1));
+}
+
+function drawAxisLabels(sp){
+  const step = niceStep(sp);
+  ctx.save();
+  ctx.font='500 15px "JetBrains Mono",monospace';
+  ctx.textBaseline='top';
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(200,200,220,0.75)';
+
+  // x 轴刻度（水平轴在 H/2，但只有当 0 在视野内才画在 H/2）
+  // 这里 y 轴世界位置 f(X0)=1，所以 x 轴（y=0 的世界线）位置随放大变化
+  // 简化：x 轴数字标注在 y=0 世界线的屏幕位置，若不在屏幕内则标在底部
+  const yAxisScreen = H/2 + (f(X0)-0)/sp*(H/2);  // y=0 的屏幕位置
+  const xLabelY = (yAxisScreen > 20 && yAxisScreen < H-20) ? yAxisScreen : H-18;
+
+  // 从 X0 向两边找刻度
+  for(let k=-Math.ceil(sp/step); k<=Math.ceil(sp/step); k++){
+    const x = X0 + k*step;
+    const px = W/2 + (x-X0)/sp*(W/2);
+    if(px < -20 || px > W+20) continue;
+    if(Math.abs(x) < step*0.001) continue;  // 跳过 0，单独画原点
+    ctx.fillText(fmtNum(x), px, xLabelY+5);
+  }
+  // y 轴刻度（垂直轴在 W/2，即 X0 处）
+  ctx.textAlign='right';
+  ctx.textBaseline='middle';
+  for(let k=-Math.ceil(sp*3/step); k<=Math.ceil(sp*3/step); k++){
+    const y = f(X0) + k*step;
+    const py = H/2 - (y-f(X0))/sp*(H/2);
+    if(py < -20 || py > H+20) continue;
+    if(Math.abs(y) < step*0.001) continue;
+    ctx.fillText(fmtNum(y), W/2-6, py);
+  }
+  // 原点标注
+  ctx.textAlign='right'; ctx.textBaseline='top';
+  ctx.fillText('0', W/2-6, xLabelY+5);
+  ctx.restore();
+}
+
+// 左下角视野框：显示当前"看到的世界范围"
+function drawViewfinder(sp){
+  const bw=150, bh=170, bx=W-bw-24, by=H-bh-24;
+  ctx.save();
+  // 框底
+  ctx.fillStyle='rgba(10,10,15,0.75)';ctx.strokeStyle='rgba(140,140,180,0.3)';ctx.lineWidth=1;
+  ctx.fillRect(bx,by,bw,bh);ctx.strokeRect(bx,by,bw,bh);
+  // 标题
+  ctx.fillStyle='#8a8a9a';ctx.font='500 11px "JetBrains Mono",monospace';ctx.textAlign='left';
+  ctx.fillText('视野范围',bx+8,by+8);
+  // 框内：迷你曲线（当前视野范围内的曲线）+ 高亮当前位置
+  const ix=bx+12, iy=by+24, iw=bw-24, ih=bh-40;
+  // 迷你曲线：画当前视野内的 f(x)
+  ctx.strokeStyle='rgba(88,196,221,0.5)';ctx.lineWidth=1.5;
+  ctx.beginPath();
+  for(let i=0;i<=100;i++){
+    const x=X0-sp+2*sp*i/100;const y=f(x);
+    const cx=ix+(x-(X0-sp))/(2*sp)*iw;
+    const cy=iy+ih-(y-(f(X0)-sp))/(2*sp)*ih;
+    if(i===0)ctx.moveTo(cx,cy);else ctx.lineTo(cx,cy);
+  }
+  ctx.stroke();
+  // 中心竖线（X0 位置）
+  ctx.strokeStyle='#FFD93D';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(ix+iw/2,iy);ctx.lineTo(ix+iw/2,iy+ih);ctx.stroke();
+  ctx.restore();
+}
+
+function drawIntro(t){
+  ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
+  const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillText('放 大 · 微 分 的 几 何 直 觉', W/2, H*0.36);
+  ctx.fillStyle='#FFFFFF';ctx.font='700 54px "JetBrains Mono",monospace';
+  ctx.fillText('为什么放大之后，', W/2, H*0.48);
+  ctx.fillStyle='#FFD93D';
+  ctx.fillText('曲线就「变直」了？', W/2, H*0.48+68);
+  ctx.restore();
+}
+function drawOutro(t){
+  ctx.save();
+  const grad=ctx.createLinearGradient(0,H*0.35,0,H);grad.addColorStop(0,'rgba(10,10,15,0)');grad.addColorStop(1,'rgba(10,10,15,0.92)');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+  const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 42px "JetBrains Mono",monospace';
+  ctx.fillText('放大 100 倍后：曲线 ≈ 切线', W/2, H*0.70);
+  ctx.fillStyle='#83C167';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillText('误差 → 0，这就是「局部线性」', W/2, H*0.70+44);
+  ctx.fillStyle='#FFD93D';ctx.font='600 28px "JetBrains Mono",monospace';
+  ctx.fillText('微积分的一切，从这一眼开始', W/2, H*0.70+100);
+  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 22px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
+  ctx.restore();
+}
+
+document.getElementById('reset').addEventListener('click',()=>setFrame(0));
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';document.getElementById('controls').style.display='none';document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>
