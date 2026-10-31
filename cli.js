@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // 数学可视化视频生产管线 CLI
 // 用法：node cli.js <命令> [参数]
-// 命令：list | render | cover | music | video | all | init
+// 命令：list | render | cover | music | video | all | init | prompt
 const fs = require('fs');
 const path = require('path');
 const { execSync, spawnSync } = require('child_process');
 const { findFfmpeg } = require('./lib/ffmpeg');
+const { buildPrompt } = require('./lib/prompt');
 
 const ROOT = __dirname;
 const CONFIG_PATH = path.join(ROOT, 'config.json');
@@ -32,11 +33,13 @@ function help() {
   video <id>        渲染 + 封面（一条龙）
   all               渲染所有短视频 + 生成所有封面
   init              检查环境依赖是否齐全
+  prompt <主题>     生成新选题的动画制作提示词（交给 AI 产出 HTML）
 
 示例:
   node cli.js list
   node cli.js render lie
   node cli.js cover lie limit e
+  node cli.js prompt "正态分布为什么无处不在" --type short
   node cli.js all
 `);
 }
@@ -140,8 +143,45 @@ function genMusic(style, duration) {
   else err('配乐生成失败');
 }
 
+// 生成新选题提示词
+function genPrompt(topic, options = {}) {
+  if (!topic) { err('用法: node cli.js prompt <主题> [--type short|chapter] [--duration 秒] [--notes 补充说明]'); return; }
+
+  // 解析参数
+  const type = options.type || 'short';
+  const duration = parseFloat(options.duration || (type === 'short' ? 20 : 90));
+  const notes = options.notes || '';
+
+  const prompt = buildPrompt({ topic, type, duration, notes });
+  console.log('\n========== 动画制作提示词 ==========\n');
+  console.log(prompt);
+  console.log('====================================\n');
+
+  // 同时存成文件，方便复制
+  const outFile = path.join(ROOT, `prompt_${Date.now()}.txt`);
+  fs.writeFileSync(outFile, prompt, 'utf8');
+  ok(`提示词已保存到: ${path.basename(outFile)}`);
+  log('把上面提示词发给 AI（如 DSH），拿到 HTML 后放入项目目录，用 render 渲染成片');
+}
+
 // 主入口
 const [cmd, ...args] = process.argv.slice(2);
+
+// 解析 --key value 形式的参数
+function parseOpts(argv) {
+  const opts = {};
+  const rest = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i].startsWith('--')) {
+      const key = argv[i].slice(2);
+      const val = argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[++i] : true;
+      opts[key] = val;
+    } else {
+      rest.push(argv[i]);
+    }
+  }
+  return { opts, rest };
+}
 
 switch (cmd) {
   case 'list': listTopics(); break;
@@ -156,6 +196,11 @@ switch (cmd) {
     for (const t of loadConfig().topics) renderVideo(t.id);
     renderCover(null);
     break;
+  case 'prompt': {
+    const { opts, rest } = parseOpts(args);
+    genPrompt(rest.join(' '), opts);
+    break;
+  }
   case 'init': checkEnv(); break;
   default: help(); break;
 }

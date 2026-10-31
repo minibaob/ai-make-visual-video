@@ -89,6 +89,32 @@
       </div>
       <button id="saveBtn" class="sec">保存设置</button>
     </div>
+
+    <!-- 提示词生成器 -->
+    <div class="card" style="grid-column: span 2;">
+      <h2>新选题提示词生成器</h2>
+      <div class="field">
+        <label>主题（想做什么内容的动画）</label>
+        <input type="text" id="promptTopic" placeholder="例如：正态分布为什么无处不在">
+      </div>
+      <div class="field">
+        <label>类型</label>
+        <select id="promptType">
+          <option value="short">短视频（17-23秒，三幕）</option>
+          <option value="chapter">长视频章节（40-120秒，讲解）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>时长（秒）</label>
+        <input type="number" id="promptDuration" value="20">
+      </div>
+      <div class="field">
+        <label>补充要求（可选）</label>
+        <input type="text" id="promptNotes" placeholder="例如：用中心极限定理演示">
+      </div>
+      <button id="promptBtn" class="warn">生成提示词</button>
+      <div style="margin-top:16px;font-size:12px;color:var(--muted);">生成后复制提示词，发给 AI（如 DSH）产出 HTML 动画，放回项目目录即可用「渲染」出片。</div>
+    </div>
   </div>
 
   <div id="log">等待操作...</div>
@@ -174,6 +200,29 @@ document.getElementById('saveBtn').onclick = async () => {
   config.output.fps = parseInt(document.getElementById('fps').value, 10);
   await api('/api/config', 'POST', config);
   log('✓ 设置已保存');
+};
+
+document.getElementById('promptBtn').onclick = async () => {
+  const topic = document.getElementById('promptTopic').value.trim();
+  if (!topic) { log('✗ 请先输入主题'); return; }
+  const type = document.getElementById('promptType').value;
+  const duration = parseFloat(document.getElementById('promptDuration').value);
+  const notes = document.getElementById('promptNotes').value.trim();
+  log('▶ 生成提示词...');
+  const r = await fetch('/api/prompt', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ topic, type, duration, notes })
+  });
+  const data = await r.json();
+  if (data.prompt) {
+    log('\n========== 动画制作提示词 ==========\n');
+    log(data.prompt);
+    log('====================================\n');
+    log('✓ 提示词已生成，复制后发给 AI 产出 HTML');
+  } else {
+    log('✗ 生成失败: ' + (data.error || '未知错误'));
+  }
 };
 
 loadConfig();

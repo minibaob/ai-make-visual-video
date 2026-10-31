@@ -11,6 +11,7 @@
     "list": "node cli.js list",
     "render": "node cli.js render",
     "cover": "node cli.js cover",
+    "prompt": "node cli.js prompt",
     "config": "node server.js",
     "init": "node cli.js init",
     "test": "echo \"Error: no test specified\" && exit 1"

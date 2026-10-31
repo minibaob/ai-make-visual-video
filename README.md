@@ -38,7 +38,28 @@ node cli.js music lie     # 生成配乐
 node cli.js video lie     # 渲染+封面一条龙
 node cli.js all           # 渲染所有短视频+生成所有封面
 node cli.js init          # 检查环境依赖
+node cli.js prompt "正态分布为什么无处不在" --type short   # 生成新选题提示词
 ```
+
+### 生成全新选题
+
+工具不会只局限在现有的 8 个动画。输入一个主题，生成一份「动画制作提示词」，拿着它交给任意大模型（如 DSH）产出 HTML 动画，放回项目目录即可渲染成片：
+
+```
+你 → 输入主题 → 工具生成提示词 → 发给 AI → AI 产出 HTML → 放入项目 → render 出片
+```
+
+```bash
+# 短视频
+node cli.js prompt "正态分布为什么无处不在" --type short
+
+# 长视频章节
+node cli.js prompt "中心极限定理" --type chapter --duration 90 --notes "用掷硬币演示"
+
+# 配置台里也有「提示词生成器」卡片，可视化输入
+```
+
+生成的提示词会自动包含项目的全部技术规范（三幕结构、确定性帧驱动、配色、坐标轴刻度、导出模式），确保 AI 产出的 HTML 能直接接入截图→合成管线。
 
 ## 生产管线
 
@@ -76,10 +97,11 @@ pip install -i https://mirrors.aliyun.com/pypi/simple/ numpy edge-tts imageio-ff
 
 | 文件 | 作用 |
 |---|---|
-| `cli.js` | CLI 统一入口（list/render/cover/music/video/all/init） |
+| `cli.js` | CLI 统一入口（list/render/cover/music/video/all/init/prompt） |
 | `server.js` + `config.html` | 本地 Web 配置台 |
 | `config.json` | 集中配置（选题列表、分辨率、封面尺寸等） |
 | `lib/ffmpeg.js` | ffmpeg 路径自动探测 |
+| `lib/prompt.js` | 新选题提示词生成器 |
 | `export_capture.js` | 逐帧截图（`node export_capture.js <html> <帧数> <输出目录>`） |
 | `build_video.py` | ffmpeg 合成帧序列 + 混入配乐 |
 | `gen_music.py` | 代码生成多情景配乐（悬疑/逼近/生长/圆融） |

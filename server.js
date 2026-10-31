@@ -86,6 +86,25 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // API: 生成提示词
+  if (req.method === 'POST' && url.pathname === '/api/prompt') {
+    let body = '';
+    req.on('data', d => body += d);
+    req.on('end', () => {
+      try {
+        const { buildPrompt } = require('./lib/prompt');
+        const { topic, type, duration, notes } = JSON.parse(body);
+        const prompt = buildPrompt({ topic, type: type || 'short', duration: duration || 20, notes: notes || '' });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ prompt }));
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404); res.end('Not Found');
 });
 
