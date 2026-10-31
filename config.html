@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数学可视化视频配置台</title>
+<style>
+  :root{--bg:#0A0A0F;--panel:#14141f;--border:#2a2a3a;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:"JetBrains Mono","PingFang SC","Microsoft YaHei",monospace;min-height:100vh;padding:32px;}
+  h1{font-size:28px;font-weight:900;margin-bottom:6px;}
+  h1 .accent{color:var(--yellow);}
+  .sub{color:var(--muted);margin-bottom:32px;font-size:14px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;max-width:1400px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;}
+  .card h2{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--blue);}
+  .topic{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:.15s;}
+  .topic:hover{border-color:var(--blue);}
+  .topic.selected{border-color:var(--yellow);background:rgba(255,217,61,0.06);}
+  .topic .name{font-size:14px;}
+  .topic .meta{font-size:11px;color:var(--muted);}
+  button{font-family:inherit;font-size:13px;letter-spacing:1px;background:var(--blue);color:#0A0A0F;border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700;transition:.15s;}
+  button:hover{opacity:.85;}
+  button.sec{background:transparent;border:1px solid var(--border);color:var(--text);}
+  button.warn{background:var(--yellow);}
+  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+  #log{background:#000;border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:28px;max-width:1400px;min-height:120px;font-size:12px;white-space:pre-wrap;color:var(--green);line-height:1.5;overflow:auto;max-height:300px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .field input,.field select{width:100%;background:#0A0A0F;border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:inherit;font-size:13px;}
+  .tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(88,196,221,0.15);color:var(--blue);margin-left:8px;}
+</style>
+</head>
+<body>
+  <h1>数学可视化视频<span class="accent">配置台</span></h1>
+  <div class="sub">可视化选择选题、调参数、一键生成视频和封面</div>
+
+  <div class="grid">
+    <!-- 短视频 -->
+    <div class="card">
+      <h2>短视频选题</h2>
+      <div id="topicList"></div>
+      <div class="row">
+        <button id="renderBtn" class="warn">▶ 渲染选中</button>
+        <button id="coverBtn">生成封面</button>
+      </div>
+    </div>
+
+    <!-- 长视频章节 -->
+    <div class="card">
+      <h2>长视频章节</h2>
+      <div id="chapterList"></div>
+    </div>
+
+    <!-- 配乐 -->
+    <div class="card">
+      <h2>配乐生成</h2>
+      <div class="field">
+        <label>情景风格</label>
+        <select id="musicStyle">
+          <option value="lie">悬疑（微分谎言）</option>
+          <option value="limit">逼近（极限）</option>
+          <option value="e">生长（复利）</option>
+          <option value="sin">圆融（单位圆）</option>
+          <option value="generic">通用</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>时长（秒）</label>
+        <input type="number" id="musicDur" value="17">
+      </div>
+      <button id="musicBtn">生成配乐</button>
+    </div>
+
+    <!-- 输出设置 -->
+    <div class="card">
+      <h2>输出设置</h2>
+      <div class="field">
+        <label>分辨率</label>
+        <select id="resolution">
+          <option value="1920x1080">1920×1080 (16:9)</option>
+          <option value="1440x1080">1440×1080 (4:3)</option>
+          <option value="1080x1920">1080×1920 (9:16)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>帧率</label>
+        <input type="number" id="fps" value="30">
+      </div>
+      <button id="saveBtn" class="sec">保存设置</button>
+    </div>
+  </div>
+
+  <div id="log">等待操作...</div>
+
+<script>
+let config = null;
+let selectedTopics = new Set();
+
+async function api(path, method='GET', body=null) {
+  const opt = { method, headers: {} };
+  if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+  const r = await fetch(path, opt);
+  return r.json();
+}
+
+function log(msg) { document.getElementById('log').textContent += msg + '\n'; }
+
+async function loadConfig() {
+  config = await api('/api/config');
+  // 渲染短视频选题
+  const tl = document.getElementById('topicList');
+  tl.innerHTML = '';
+  config.topics.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'topic';
+    div.innerHTML = `<span class="name">${t.name}</span><span class="meta">${t.frames}帧 <span class="tag">${t.id}</span></span>`;
+    div.onclick = () => {
+      div.classList.toggle('selected');
+      if (selectedTopics.has(t.id)) selectedTopics.delete(t.id); else selectedTopics.add(t.id);
+    };
+    tl.appendChild(div);
+  });
+  // 渲染长视频章节
+  const cl = document.getElementById('chapterList');
+  cl.innerHTML = '';
+  config.chapters.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'topic';
+    div.innerHTML = `<span class="name">${c.name}</span><span class="meta">${c.frames}帧 <span class="tag">${c.id}</span></span>`;
+    div.onclick = () => {
+      div.classList.toggle('selected');
+      if (selectedTopics.has(c.id)) selectedTopics.delete(c.id); else selectedTopics.add(c.id);
+    };
+    cl.appendChild(div);
+  });
+  // 回填设置
+  const [w,h] = String(config.output.width)+'x'+String(config.output.height);
+  document.getElementById('resolution').value = w+'x'+h;
+  document.getElementById('fps').value = config.output.fps;
+}
+
+document.getElementById('renderBtn').onclick = async () => {
+  if (selectedTopics.size === 0) { log('✗ 请先选择至少一个选题'); return; }
+  for (const id of selectedTopics) {
+    log(`▶ 开始渲染 ${id}...`);
+    const r = await api('/api/run', 'POST', { command: 'render', args: [id] });
+    log(r.out || '');
+    if (r.err) log('ERR: ' + r.err);
+  }
+  log('✓ 渲染完成');
+};
+
+document.getElementById('coverBtn').onclick = async () => {
+  const ids = selectedTopics.size ? [...selectedTopics] : [];
+  log('▶ 生成封面...');
+  const r = await api('/api/run', 'POST', { command: 'cover', args: ids });
+  log(r.out || '');
+  log('✓ 封面完成');
+};
+
+document.getElementById('musicBtn').onclick = async () => {
+  const style = document.getElementById('musicStyle').value;
+  const dur = document.getElementById('musicDur').value;
+  log(`▶ 生成配乐 ${style} (${dur}s)...`);
+  const r = await api('/api/run', 'POST', { command: 'music', args: [style, dur] });
+  log(r.out || '');
+};
+
+document.getElementById('saveBtn').onclick = async () => {
+  const [w,h] = document.getElementById('resolution').value.split('x').map(Number);
+  config.output.width = w;
+  config.output.height = h;
+  config.output.fps = parseInt(document.getElementById('fps').value, 10);
+  await api('/api/config', 'POST', config);
+  log('✓ 设置已保存');
+};
+
+loadConfig();
+</script>
+</body>
+</html>

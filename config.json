@@ -1,0 +1,40 @@
+{
+  "output": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "crf": 18,
+    "dir": "export"
+  },
+  "topics": [
+    { "id": "tangent",  "file": "derivative-tangent.html", "name": "导数就是切线的斜率", "frames": 510 },
+    { "id": "lie",      "file": "topic1_lie.html",           "name": "为什么微分是谎言",     "frames": 510 },
+    { "id": "limit",    "file": "topic2_limit.html",         "name": "极限的定义 ε-δ",      "frames": 510 },
+    { "id": "e",        "file": "topic3_e.html",             "name": "e 为什么是复利之王",  "frames": 510 },
+    { "id": "sin",      "file": "topic4_sin.html",           "name": "sin 的导数",           "frames": 510 },
+    { "id": "zoom",     "file": "topic5_zoom.html",          "name": "局部放大",             "frames": 690 },
+    { "id": "weierstrass", "file": "topic6_weierstrass.html","name": "魏尔斯特拉斯分形",     "frames": 690 },
+    { "id": "fourier",  "file": "topic7_fourier.html",       "name": "傅里叶分解",           "frames": 690 }
+  ],
+  "chapters": [
+    { "id": "ch0", "file": "ch0_intro.html",       "name": "引入：两个老问题",     "frames": 1800 },
+    { "id": "ch1", "file": "ch1_tangent.html",     "name": "切线问题",             "frames": 2700 },
+    { "id": "ch2", "file": "ch2_zoom.html",        "name": "放大直觉",             "frames": 2700 },
+    { "id": "ch3", "file": "ch3_limit.html",       "name": "极限定义",             "frames": 2700 },
+    { "id": "ch4", "file": "ch4_application.html", "name": "导数的应用",           "frames": 1800 },
+    { "id": "ch5", "file": "ch5_area.html",        "name": "面积问题",             "frames": 1800 },
+    { "id": "ch6", "file": "ch6_ftc.html",         "name": "基本定理",             "frames": 3600 },
+    { "id": "ch7", "file": "ch7_outro.html",       "name": "升华结语",             "frames": 1200 }
+  ],
+  "covers": {
+    "sizes": [
+      { "id": "43",  "name": "横版 4:3",  "w": 1440, "h": 1080 },
+      { "id": "916", "name": "竖版 9:16", "w": 1080, "h": 1920 }
+    ],
+    "cover_topics": ["tangent", "lie", "limit", "e", "sin", "zoom", "weierstrass", "fourier", "calculus"]
+  },
+  "music": {
+    "styles": ["lie", "limit", "e", "sin", "generic"],
+    "duration": 17
+  }
+}

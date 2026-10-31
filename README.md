@@ -17,14 +17,39 @@
 **长视频（10 分钟）**
 - 《微积分到底在解决什么？》——从切线到积分的完整直觉，7 章结构
 
+## 快速开始（开箱即用）
+
+### 方式一：可视化配置台（推荐，无需记命令）
+
+```bash
+npm run config
+# 或 node server.js
+```
+
+浏览器打开 `http://localhost:3000`，可视化选择选题、调参数、一键渲染视频和封面。
+
+### 方式二：命令行 CLI
+
+```bash
+node cli.js list          # 列出所有选题
+node cli.js render lie    # 渲染单个视频
+node cli.js cover lie     # 生成封面
+node cli.js music lie     # 生成配乐
+node cli.js video lie     # 渲染+封面一条龙
+node cli.js all           # 渲染所有短视频+生成所有封面
+node cli.js init          # 检查环境依赖
+```
+
 ## 生产管线
 
 ```
 写选题 HTML（三幕骨架）
   → 逐帧截图（export_capture.js，Playwright 复用系统 Chrome）
-  → 合成视频（ffmpeg）
+  → 合成视频（ffmpeg，自动探测路径）
   → 生成封面（cover_polish.html + render_43_covers.js）
 ```
+
+CLI 工具（`cli.js`）把这些步骤串成一条命令；配置台（`server.js` + `config.html`）提供可视化界面。ffmpeg 路径自动探测（环境变量 → imageio-ffmpeg 包 → 系统 PATH），无需手动配置。
 
 ## 环境依赖
 
@@ -51,6 +76,10 @@ pip install -i https://mirrors.aliyun.com/pypi/simple/ numpy edge-tts imageio-ff
 
 | 文件 | 作用 |
 |---|---|
+| `cli.js` | CLI 统一入口（list/render/cover/music/video/all/init） |
+| `server.js` + `config.html` | 本地 Web 配置台 |
+| `config.json` | 集中配置（选题列表、分辨率、封面尺寸等） |
+| `lib/ffmpeg.js` | ffmpeg 路径自动探测 |
 | `export_capture.js` | 逐帧截图（`node export_capture.js <html> <帧数> <输出目录>`） |
 | `build_video.py` | ffmpeg 合成帧序列 + 混入配乐 |
 | `gen_music.py` | 代码生成多情景配乐（悬疑/逼近/生长/圆融） |

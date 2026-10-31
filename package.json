@@ -1,14 +1,23 @@
 {
-  "name": "2026-10-30-21-55-59",
+  "name": "math-viz-pipeline",
   "version": "1.0.0",
-  "description": "",
-  "main": "export_capture.js",
+  "description": "用 AI 与代码批量生产 3Blue1Brown 风格数学可视化短视频和长视频",
+  "main": "cli.js",
+  "bin": {
+    "mathviz": "cli.js"
+  },
   "scripts": {
+    "cli": "node cli.js",
+    "list": "node cli.js list",
+    "render": "node cli.js render",
+    "cover": "node cli.js cover",
+    "config": "node server.js",
+    "init": "node cli.js init",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["math", "visualization", "video", "3blue1brown", "calculus", "animation"],
+  "author": "minibaob",
+  "license": "MIT",
   "dependencies": {
     "playwright": "^1.64.1"
   }
