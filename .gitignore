@@ -12,3 +12,7 @@ Thumbs.db
 # 临时文件
 concat.txt
 prompt_*.txt
+
+# 本地预览与字号备份（不入库）
+_preview/
+tools/.fontbak/
