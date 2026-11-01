@@ -122,7 +122,7 @@ function draw(){
   ctx.save();
   ctx.strokeStyle='#FF6B6B';ctx.lineWidth=3;ctx.setLineDash([6,5]);
   ctx.beginPath();ctx.moveTo(pxE,pyC);ctx.lineTo(pxE,pyL);ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle='#FF6B6B';ctx.font='600 18px "JetBrains Mono",monospace';ctx.textAlign='left';
+  ctx.fillStyle='#FF6B6B';ctx.font='600 22px "JetBrains Mono",monospace';ctx.textAlign='left';
   const err=Math.abs(yC-yL);
   ctx.fillText(err<1e-9?'误差 → 0':`误差 ${err.toFixed(3)}`, pxE+8, (pyC+pyL)/2);
   ctx.restore();
@@ -133,11 +133,11 @@ function draw(){
 
   // ---- 顶部文字 ----
   ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 42px "JetBrains Mono",monospace';
   ctx.fillText('f(x) = x²', 28, 52);
-  ctx.font='700 30px "JetBrains Mono",monospace';ctx.fillStyle='#FFD93D';
+  ctx.font='700 40px "JetBrains Mono",monospace';ctx.fillStyle='#FFD93D';
   ctx.fillText(`放大 ${z.toFixed(0)} 倍`, 28, 96);
-  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  ctx.font='500 28px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
   if(frame<P0_END) ctx.fillText('把镜头对准 x=1 附近，准备放大',28,138);
   else if(frame<P1_END) ctx.fillText('局部拉近……曲线越来越像直线',28,138);
   else ctx.fillText('曲线 ≈ 切线，这就是微分的秘密',28,138);
@@ -173,7 +173,7 @@ function fmtNum(v){
 function drawAxisLabels(sp){
   const step = niceStep(sp);
   ctx.save();
-  ctx.font='500 15px "JetBrains Mono",monospace';
+  ctx.font='500 17px "JetBrains Mono",monospace';
   ctx.textBaseline='top';
   ctx.textAlign='center';
   ctx.fillStyle='rgba(200,200,220,0.75)';
@@ -216,7 +216,7 @@ function drawViewfinder(sp){
   ctx.fillStyle='rgba(10,10,15,0.75)';ctx.strokeStyle='rgba(140,140,180,0.3)';ctx.lineWidth=1;
   ctx.fillRect(bx,by,bw,bh);ctx.strokeRect(bx,by,bw,bh);
   // 标题
-  ctx.fillStyle='#8a8a9a';ctx.font='500 11px "JetBrains Mono",monospace';ctx.textAlign='left';
+  ctx.fillStyle='#8a8a9a';ctx.font='500 14px "JetBrains Mono",monospace';ctx.textAlign='left';
   ctx.fillText('视野范围',bx+8,by+8);
   // 框内：迷你曲线（当前视野范围内的曲线）+ 高亮当前位置
   const ix=bx+12, iy=by+24, iw=bw-24, ih=bh-40;
@@ -240,9 +240,9 @@ function drawIntro(t){
   ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
   const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD';ctx.font='500 28px "JetBrains Mono",monospace';
   ctx.fillText('放 大 · 微 分 的 几 何 直 觉', W/2, H*0.36);
-  ctx.fillStyle='#FFFFFF';ctx.font='700 54px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 60px "JetBrains Mono",monospace';
   ctx.fillText('为什么放大之后，', W/2, H*0.48);
   ctx.fillStyle='#FFD93D';
   ctx.fillText('曲线就「变直」了？', W/2, H*0.48+68);
@@ -254,13 +254,13 @@ function drawOutro(t){
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#FFFFFF';ctx.font='700 42px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 46px "JetBrains Mono",monospace';
   ctx.fillText('放大 100 倍后：曲线 ≈ 切线', W/2, H*0.70);
-  ctx.fillStyle='#83C167';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillStyle='#83C167';ctx.font='500 30px "JetBrains Mono",monospace';
   ctx.fillText('误差 → 0，这就是「局部线性」', W/2, H*0.70+44);
-  ctx.fillStyle='#FFD93D';ctx.font='600 28px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFD93D';ctx.font='600 34px "JetBrains Mono",monospace';
   ctx.fillText('微积分的一切，从这一眼开始', W/2, H*0.70+100);
-  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 22px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
+  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 26px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
   ctx.restore();
 }
 

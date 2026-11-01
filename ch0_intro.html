@@ -53,11 +53,11 @@ function draw(){
   ctx.fillStyle='rgba(20,20,40,0.9)';ctx.strokeStyle='rgba(88,196,221,0.6)';ctx.lineWidth=2;
   roundRect(cx1-170,cy1-100,340,200,16);
   ctx.fill();ctx.stroke();
-  ctx.fillStyle='#58C4DD';ctx.font='600 26px "JetBrains Mono",monospace';ctx.textAlign='center';
+  ctx.fillStyle='#58C4DD';ctx.font='600 30px "JetBrains Mono",monospace';ctx.textAlign='center';
   ctx.fillText('问题一', cx1, cy1-50);
-  ctx.fillStyle='#fff';ctx.font='700 30px "JetBrains Mono",monospace';
+  ctx.fillStyle='#fff';ctx.font='700 40px "JetBrains Mono",monospace';
   ctx.fillText('瞬时速度？', cx1, cy1+5);
-  ctx.fillStyle='#8a8a9a';ctx.font='500 18px "JetBrains Mono",monospace';
+  ctx.fillStyle='#8a8a9a';ctx.font='500 22px "JetBrains Mono",monospace';
   ctx.fillText('物体在某一瞬间多快', cx1, cy1+45);
 
   // 卡片2：面积
@@ -66,20 +66,20 @@ function draw(){
   ctx.fillStyle='rgba(20,20,40,0.9)';ctx.strokeStyle='rgba(131,193,103,0.6)';ctx.lineWidth=2;
   roundRect(cx2-170,cy2-100,340,200,16);
   ctx.fill();ctx.stroke();
-  ctx.fillStyle='#83C167';ctx.font='600 26px "JetBrains Mono",monospace';ctx.textAlign='center';
+  ctx.fillStyle='#83C167';ctx.font='600 30px "JetBrains Mono",monospace';ctx.textAlign='center';
   ctx.fillText('问题二', cx2, cy2-50);
-  ctx.fillStyle='#fff';ctx.font='700 30px "JetBrains Mono",monospace';
+  ctx.fillStyle='#fff';ctx.font='700 40px "JetBrains Mono",monospace';
   ctx.fillText('弯曲面积？', cx2, cy2+5);
-  ctx.fillStyle='#8a8a9a';ctx.font='500 18px "JetBrains Mono",monospace';
+  ctx.fillStyle='#8a8a9a';ctx.font='500 22px "JetBrains Mono",monospace';
   ctx.fillText('不规则图形的面积', cx2, cy2+45);
   ctx.restore();
 
   // 标题
   ctx.save();
   ctx.globalAlpha=Math.min(1, frame/(FPS*0.8));
-  ctx.fillStyle='#58C4DD';ctx.font='500 22px "JetBrains Mono",monospace';ctx.textAlign='center';
+  ctx.fillStyle='#58C4DD';ctx.font='500 26px "JetBrains Mono",monospace';ctx.textAlign='center';
   ctx.fillText('微 积 分 到 底 在 解 决 什 么', W/2, H*0.22);
-  ctx.fillStyle='#FFD93D';ctx.font='700 30px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFD93D';ctx.font='700 40px "JetBrains Mono",monospace';
   ctx.fillText('—— 两个老问题，一种思想', W/2, H*0.22+48);
   ctx.restore();
 }

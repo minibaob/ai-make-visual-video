@@ -66,7 +66,7 @@ function draw(){
   ctx.restore();
   // 刻度
   ctx.save();
-  ctx.font='500 15px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
+  ctx.font='500 17px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
   for(let x=-3;x<=3;x++){if(x===0)continue;ctx.fillText(x,px(x),py(0)+5);}
   ctx.textAlign='right';ctx.textBaseline='middle';
   for(let y=1;y<=2;y++){ctx.fillText(y,px(0)-6,py(y));}
@@ -84,7 +84,7 @@ function draw(){
   ctx.strokeStyle='rgba(255,217,61,0.6)';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
   ctx.beginPath();ctx.moveTo(0,py(1+eps));ctx.lineTo(W,py(1+eps));ctx.stroke();
   ctx.beginPath();ctx.moveTo(0,py(1-eps));ctx.lineTo(W,py(1-eps));ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle='#FFD93D';ctx.font='500 16px "JetBrains Mono",monospace';ctx.textAlign='left';
+  ctx.fillStyle='#FFD93D';ctx.font='500 18px "JetBrains Mono",monospace';ctx.textAlign='left';
   ctx.fillText(`ε=${eps.toFixed(3)}`,12,py(1+eps)-6);
   ctx.restore();
 
@@ -95,7 +95,7 @@ function draw(){
   ctx.strokeStyle='rgba(88,196,221,0.6)';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
   ctx.beginPath();ctx.moveTo(px(-del),0);ctx.lineTo(px(-del),H);ctx.stroke();
   ctx.beginPath();ctx.moveTo(px(del),0);ctx.lineTo(px(del),H);ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle='#58C4DD';ctx.font='500 16px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD';ctx.font='500 18px "JetBrains Mono",monospace';
   ctx.fillText(`δ=${del.toFixed(3)}`,px(del)+6,py(2.4));
   ctx.restore();
 
@@ -104,15 +104,15 @@ function draw(){
   ctx.fillStyle='#FFD93D';ctx.shadowColor='#FFD93D';ctx.shadowBlur=12;
   ctx.beginPath();ctx.arc(px(0),py(1),7,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(px(0),py(1),12,0,Math.PI*2);ctx.stroke();
-  ctx.fillStyle='#fff';ctx.font='500 16px "JetBrains Mono",monospace';ctx.textAlign='left';
+  ctx.fillStyle='#fff';ctx.font='500 18px "JetBrains Mono",monospace';ctx.textAlign='left';
   ctx.fillText('L',px(0)+16,py(1)-10);
   ctx.restore();
 
   // 顶部文字
   ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 42px "JetBrains Mono",monospace';
   ctx.fillText('极限的定义：ε-δ',28,52);
-  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  ctx.font='500 28px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
   if(frame<INTRO_END) ctx.fillText('"无限接近"到底怎么精确刻画？',28,138);
   else if(eps>0.2) ctx.fillText('任给 ε，都能找到 δ',28,138);
   else ctx.fillText('ε 可以任意小 → 这才是"接近"',28,138);
@@ -126,9 +126,9 @@ function drawIntro(t){
   ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
   const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD';ctx.font='500 28px "JetBrains Mono",monospace';
   ctx.fillText('第 三 章 · 极 限 的 定 义',W/2,H*0.42);
-  ctx.fillStyle='#FFFFFF';ctx.font='700 50px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 54px "JetBrains Mono",monospace';
   ctx.fillText('补上严谨性的那块拼图',W/2,H*0.52);
   ctx.restore();
 }
@@ -137,9 +137,9 @@ function drawOutro(t){
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#83C167';ctx.font='700 40px "JetBrains Mono",monospace';
+  ctx.fillStyle='#83C167';ctx.font='700 44px "JetBrains Mono",monospace';
   ctx.fillText('∀ ε>0, ∃ δ>0',W/2,H*0.72);
-  ctx.fillStyle='#EAEAEA';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillStyle='#EAEAEA';ctx.font='500 30px "JetBrains Mono",monospace';
   ctx.fillText('微积分的地基，从此稳固',W/2,H*0.72+46);
   ctx.restore();
 }

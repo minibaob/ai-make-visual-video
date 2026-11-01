@@ -75,7 +75,7 @@ function draw(){
   ctx.strokeStyle='rgba(131,193,103,0.6)'; ctx.lineWidth=2; ctx.setLineDash([8,6]);
   ctx.beginPath(); ctx.moveTo(curveX0, yE); ctx.lineTo(curveX1, yE); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle='#83C167'; ctx.font='500 16px "JetBrains Mono",monospace'; ctx.textAlign='right';
+  ctx.fillStyle='#83C167'; ctx.font='500 18px "JetBrains Mono",monospace'; ctx.textAlign='right';
   ctx.fillText('e ≈ 2.71828', curveX1-8, yE-8);
   ctx.restore();
 
@@ -106,24 +106,24 @@ function draw(){
   // 左侧大数字
   ctx.save();
   ctx.textAlign='left';
-  ctx.fillStyle='#8a8a9a'; ctx.font='500 20px "JetBrains Mono",monospace';
+  ctx.fillStyle='#8a8a9a'; ctx.font='500 24px "JetBrains Mono",monospace';
   ctx.fillText(`本金 1 元 · 年利率 100%`, W*0.06, H*0.30);
   ctx.fillText(`分 ${Math.round(n).toLocaleString()} 期复利`, W*0.06, H*0.30+32);
-  ctx.fillStyle='#FFFFFF'; ctx.font='700 52px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF'; ctx.font='700 56px "JetBrains Mono",monospace';
   ctx.fillText(val.toFixed(5), W*0.06, H*0.46);
-  ctx.fillStyle='#8a8a9a'; ctx.font='500 22px "JetBrains Mono",monospace';
+  ctx.fillStyle='#8a8a9a'; ctx.font='500 26px "JetBrains Mono",monospace';
   ctx.fillText('元', W*0.06+280, H*0.46);
   // 逼近 e 的差距
-  ctx.fillStyle='#83C167'; ctx.font='500 20px "JetBrains Mono",monospace';
+  ctx.fillStyle='#83C167'; ctx.font='500 24px "JetBrains Mono",monospace';
   const gap = Math.abs(E - val);
   ctx.fillText(`距 e 还差 ${gap < 1e-5 ? '→ 0' : gap.toExponential(2)}`, W*0.06, H*0.56);
   ctx.restore();
 
   // 顶部标题
   ctx.save(); ctx.textAlign='left'; ctx.textBaseline='top';
-  ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.font='600 22px "JetBrains Mono",monospace';
+  ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.font='600 26px "JetBrains Mono",monospace';
   ctx.fillText('(1 + 1/n)ⁿ  →  e', 20, 46);
-  ctx.font='500 17px "JetBrains Mono",monospace';
+  ctx.font='500 20px "JetBrains Mono",monospace';
   if(frame<INTRO_END){ ctx.fillStyle='#EAEAEA'; ctx.fillText('复利次数越多，赚得越多？',20,74); }
   else if(frame<P0_END){ ctx.fillStyle='#FFD93D'; ctx.fillText('从年复利到月复利……',20,74); }
   else if(frame<P1_END){ ctx.fillStyle='#FFD93D'; ctx.fillText('复利无限细分，逼近一个神秘数字',20,74); }
@@ -138,9 +138,9 @@ function drawIntro(t){
   ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
   const ease=t<0.25?0:Math.min(1,(t-0.25)/0.5);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#58C4DD';ctx.font='500 22px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD';ctx.font='500 26px "JetBrains Mono",monospace';
   ctx.fillText('数 学 常 数 e', W/2, H*0.36);
-  ctx.fillStyle='#FFFFFF';ctx.font='700 52px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 56px "JetBrains Mono",monospace';
   ctx.fillText('e 为什么被称为', W/2, H*0.48);
   ctx.fillStyle='#FFD93D';
   ctx.fillText('「 复 利 之 王 」', W/2, H*0.48+68);
@@ -152,13 +152,13 @@ function drawOutro(t){
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#FFFFFF';ctx.font='700 44px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 48px "JetBrains Mono",monospace';
   ctx.fillText('e = lim (1 + 1/n)ⁿ', W/2, H*0.70);
-  ctx.fillStyle='#83C167';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillStyle='#83C167';ctx.font='500 30px "JetBrains Mono",monospace';
   ctx.fillText('n→∞', W/2, H*0.70+48);
-  ctx.fillStyle='#FFD93D';ctx.font='600 28px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFD93D';ctx.font='600 34px "JetBrains Mono",monospace';
   ctx.fillText('复利的尽头，是 e', W/2, H*0.70+104);
-  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 22px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
+  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 26px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
   ctx.restore();
 }
 

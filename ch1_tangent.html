@@ -73,7 +73,7 @@ function draw(){
   ctx.restore();
   // 刻度数字
   ctx.save();
-  ctx.font='500 15px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
+  ctx.font='500 17px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
   for(let x=-2;x<=2;x++){if(x===0)continue;ctx.fillText(x,toPx(x,0)[0],toPx(0,0)[1]+5);}
   ctx.textAlign='right';ctx.textBaseline='middle';
   for(let y=-2;y<=2;y++){if(y===0)continue;ctx.fillText(y,toPx(0,0)[0]-6,toPx(0,y)[1]);}
@@ -107,9 +107,9 @@ function draw(){
 
   // 顶部文字
   ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 42px "JetBrains Mono",monospace';
   ctx.fillText('切线问题：导数就是斜率',28,52);
-  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  ctx.font='500 28px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
   if(frame<INTRO_END) ctx.fillText('平均速度 vs 瞬时速度',28,138);
   else if(phase===0) ctx.fillText('割线 = 平均变化率',28,138);
   else if(phase===1) ctx.fillText('h 越来越小，割线旋转……',28,138);
@@ -126,12 +126,12 @@ function line(px,py,slope,color,width){
   ctx.beginPath();ctx.moveTo(px-dx,py+dy);ctx.lineTo(px+dx,py-dy);ctx.stroke();ctx.restore();
 }
 function dot(px,py,color,r){ctx.save();ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=10;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();ctx.restore();}
-function label(txt,px,py,color){ctx.save();ctx.font='500 16px "JetBrains Mono",monospace';ctx.fillStyle=color;ctx.textAlign='left';ctx.textBaseline='bottom';ctx.fillText(txt,px+10,py-8);ctx.restore();}
+function label(txt,px,py,color){ctx.save();ctx.font='500 18px "JetBrains Mono",monospace';ctx.fillStyle=color;ctx.textAlign='left';ctx.textBaseline='bottom';ctx.fillText(txt,px+10,py-8);ctx.restore();}
 function slopeTriangle(px,py,slope){
   const run=50,rise=slope*run;
   ctx.save();ctx.strokeStyle='rgba(255,217,61,0.8)';ctx.lineWidth=2;
   ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+run,py);ctx.lineTo(px+run,py-rise);ctx.stroke();
-  ctx.fillStyle='rgba(255,217,61,0.9)';ctx.font='500 15px "JetBrains Mono",monospace';ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillStyle='rgba(255,217,61,0.9)';ctx.font='500 17px "JetBrains Mono",monospace';ctx.textAlign='left';ctx.textBaseline='middle';
   ctx.fillText('Δy',px+run+8,py-rise/2);ctx.fillText('Δx',px+run/2-10,py+10);ctx.restore();
 }
 
@@ -139,9 +139,9 @@ function drawIntro(t){
   ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
   const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD';ctx.font='500 28px "JetBrains Mono",monospace';
   ctx.fillText('第 一 章 · 切 线 问 题',W/2,H*0.42);
-  ctx.fillStyle='#FFFFFF';ctx.font='700 50px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 54px "JetBrains Mono",monospace';
   ctx.fillText('导数，就是切线的斜率',W/2,H*0.52);
   ctx.restore();
 }
@@ -150,7 +150,7 @@ function drawOutro(t){
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#FFD93D';ctx.font='700 40px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFD93D';ctx.font='700 44px "JetBrains Mono",monospace';
   ctx.fillText('导数 = 变化率',W/2,H*0.72);
   ctx.restore();
 }

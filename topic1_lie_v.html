@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>微分的谎言 · 竖屏版</title>
+<style>
+  :root{--bg:#0A0A0F;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;align-items:center;justify-content:center;}
+  #stage{width:540px;aspect-ratio:9/16;background:var(--bg);overflow:hidden;}
+  canvas{display:block;width:100%;height:100%;}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="cv"></canvas></div>
+<script>
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const DPR = 2;
+const W = 1080, H = 1920;
+
+function resize(){
+  cv.width = W*DPR; cv.height = H*DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+
+const FPS = 30;
+const TOTAL = 510;
+const INTRO_FADE_IN = 12, INTRO_OUT = 60, INTRO_END = 78;
+
+// 竖屏绘图区：正方形，避免 x/y 比例失真
+const PLOT = { cx: W/2, cy: 1000, half: 540 };
+
+const X0 = 1.0;
+const f  = x => x*x;
+const fp = x => 2*x;
+
+let frame = 0;
+
+// 开场就在动：帧 0 起就有缓慢推近
+function zoomLevel(){
+  if(frame < INTRO_END) return 1 + (frame/INTRO_END)*0.9;            // 1.0 → 1.9
+  if(frame < 210)       return 1.9 + (frame-INTRO_END)/(210-INTRO_END)*10.1;  // → 12
+  if(frame < 390)       return 12 + (frame-210)/(390-210)*108;       // → 120
+  return 120;
+}
+
+function px(mx, span){ return PLOT.cx + (mx - X0)/span * PLOT.half; }
+function py(my, span){ return PLOT.cy - (my - f(X0))/span * PLOT.half; }
+
+function draw(){
+  const z = zoomLevel();
+  const span = 3.0 / z;
+
+  // 背景
+  const bg = ctx.createRadialGradient(W/2, 760, 80, W/2, 900, 1250);
+  bg.addColorStop(0,'#14142a'); bg.addColorStop(1,'#0A0A0F');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+  // 网格
+  ctx.save();
+  ctx.strokeStyle='rgba(140,140,180,0.13)'; ctx.lineWidth=1.5;
+  const step = span/4;
+  for(let gx=X0-span; gx<=X0+span; gx+=step){
+    if(Math.abs(gx-X0)<1e-6) continue;
+    const x = px(gx, span);
+    ctx.beginPath(); ctx.moveTo(x, PLOT.cy-PLOT.half); ctx.lineTo(x, PLOT.cy+PLOT.half); ctx.stroke();
+  }
+  for(let gy=f(X0)-span; gy<=f(X0)+span; gy+=step){
+    const y = py(gy, span);
+    ctx.beginPath(); ctx.moveTo(PLOT.cx-PLOT.half, y); ctx.lineTo(PLOT.cx+PLOT.half, y); ctx.stroke();
+  }
+  ctx.restore();
+
+  // 曲线
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(PLOT.cx-PLOT.half, PLOT.cy-PLOT.half, PLOT.half*2, PLOT.half*2);
+  ctx.clip();
+  ctx.strokeStyle='#58C4DD'; ctx.lineWidth=9; ctx.lineJoin='round';
+  ctx.shadowColor='rgba(88,196,221,0.55)'; ctx.shadowBlur=22;
+  ctx.beginPath();
+  const N=500;
+  for(let i=0;i<=N;i++){
+    const x = X0-span + 2*span*i/N;
+    const X = px(x, span), Y = py(f(x), span);
+    i===0 ? ctx.moveTo(X,Y) : ctx.lineTo(X,Y);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  // 切线
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(PLOT.cx-PLOT.half, PLOT.cy-PLOT.half, PLOT.half*2, PLOT.half*2);
+  ctx.clip();
+  const slope = fp(X0);
+  ctx.strokeStyle='rgba(255,217,61,0.78)'; ctx.lineWidth=4.5;
+  ctx.beginPath();
+  ctx.moveTo(0, PLOT.cy - slope*(0-PLOT.cx));
+  ctx.lineTo(W, PLOT.cy - slope*(W-PLOT.cx));
+  ctx.stroke();
+  ctx.restore();
+
+  // 切点
+  ctx.save();
+  ctx.fillStyle='#FFD93D'; ctx.shadowColor='#FFD93D'; ctx.shadowBlur=20;
+  ctx.beginPath(); ctx.arc(PLOT.cx, PLOT.cy, 11, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // 误差指示
+  if(frame >= 120 && zoomLevel() < 40){
+    const xEdge = X0 + span*0.62;
+    const yCurve = f(xEdge);
+    const yLine  = f(X0) + slope*(xEdge-X0);
+    const err = Math.abs(yCurve - yLine);
+    const EX = px(xEdge, span);
+    const YC = py(yCurve, span), YL = py(yLine, span);
+    if(Math.abs(YC-YL) > 2){
+      ctx.save();
+      ctx.strokeStyle='#FF6B6B'; ctx.lineWidth=3; ctx.setLineDash([9,9]);
+      ctx.beginPath(); ctx.moveTo(EX,YC); ctx.lineTo(EX,YL); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // 顶部压暗，保证文字可读
+  const scrim = ctx.createLinearGradient(0,0,0,700);
+  scrim.addColorStop(0,'rgba(10,10,15,0.95)');
+  scrim.addColorStop(0.55,'rgba(10,10,15,0.72)');
+  scrim.addColorStop(1,'rgba(10,10,15,0)');
+  ctx.fillStyle = scrim; ctx.fillRect(0,0,W,700);
+
+  if(frame < INTRO_END) drawIntro(z);
+  drawHUD(z, span);
+  if(frame >= 390) drawOutro((frame-390)/(TOTAL-390));
+}
+
+// 开场钩子：叠在已经动起来的画面上
+function drawIntro(z){
+  const aIn  = Math.min(1, frame/INTRO_FADE_IN);
+  const aOut = frame < INTRO_OUT ? 1 : 1 - (frame-INTRO_OUT)/(INTRO_END-INTRO_OUT);
+  const a = Math.min(aIn, Math.max(0, aOut));
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+
+  ctx.fillStyle='#58C4DD'; ctx.font='500 22px "JetBrains Mono",monospace';
+  ctx.fillText('微  分  ·  真  相', 72, 210);
+
+  ctx.fillStyle='#FFFFFF'; ctx.font='700 60px "JetBrains Mono",monospace';
+  ctx.fillText('微分的核心', 68, 330);
+
+  ctx.fillStyle='#FFD93D';
+  ctx.fillText('是个「谎言」', 68, 420);
+
+  ctx.fillStyle='#EAEAEA'; ctx.font='500 30px "JetBrains Mono",monospace';
+  ctx.fillText('但它撑起了整个现代世界', 72, 500);
+
+  // 放大倍数指示，第一秒就给出"正在发生什么"
+  ctx.fillStyle='rgba(255,217,61,0.85)'; ctx.font='600 34px "JetBrains Mono",monospace';
+  ctx.textAlign='right';
+  ctx.fillText('×' + z.toFixed(1), W-72, 210);
+  ctx.restore();
+}
+
+function drawHUD(z, span){
+  const a = frame < INTRO_OUT ? 0 : Math.min(1, (frame-INTRO_OUT)/20);
+  if(a <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+
+  ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.font='600 30px "JetBrains Mono",monospace';
+  ctx.fillText('f(x) = x²   在 x = 1 处', 72, 180);
+
+  ctx.fillStyle='#FFD93D'; ctx.font='500 28px "JetBrains Mono",monospace';
+  let s;
+  if(frame < 210) s = '放大看，它越来越像直线';
+  else s = '放大 ' + z.toFixed(0) + ' 倍，曲线 ≈ 切线';
+  ctx.fillText(s, 72, 232);
+
+  ctx.textAlign='right';
+  ctx.fillStyle='rgba(255,217,61,0.9)'; ctx.font='600 34px "JetBrains Mono",monospace';
+  ctx.fillText('×' + z.toFixed(0), W-72, 180);
+
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(140,140,160,0.75)'; ctx.font='500 22px "JetBrains Mono",monospace';
+  const errVal = Math.abs(f(X0+span*0.62)-f(X0)-fp(X0)*span*0.62);
+  ctx.fillText('误差 ' + (errVal < 0.0005 ? '→ 0' : errVal.toFixed(3)), W/2, PLOT.cy + PLOT.half - 26);
+  ctx.restore();
+}
+
+function drawOutro(t){
+  const ease = Math.min(1, t/0.25);
+  ctx.save();
+  const g = ctx.createLinearGradient(0,1180,0,H);
+  g.addColorStop(0,'rgba(10,10,15,0)');
+  g.addColorStop(0.45,'rgba(10,10,15,0.86)');
+  g.addColorStop(1,'rgba(10,10,15,0.96)');
+  ctx.fillStyle=g; ctx.fillRect(0,1180,W,H-1180);
+
+  ctx.globalAlpha = ease;
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  ctx.fillStyle='#FFFFFF'; ctx.font='700 52px "JetBrains Mono",monospace';
+  ctx.fillText('「直线近似曲线」', W/2, 1420);
+  ctx.fillText('并不精确', W/2, 1490);
+
+  ctx.fillStyle='#83C167';
+  ctx.fillText('但误差 → 0', W/2, 1580);
+
+  ctx.fillStyle='#FFD93D'; ctx.font='700 52px "JetBrains Mono",monospace';
+  ctx.fillText('这就是微分的秘密', W/2, 1670);
+
+  if(t > 0.45){
+    ctx.globalAlpha = Math.min(1,(t-0.45)/0.3);
+    ctx.fillStyle='#8a8a9a'; ctx.font='500 28px "JetBrains Mono",monospace';
+    ctx.fillText('关注 · 每天一个可视化概念', W/2, 1800);
+  }
+  ctx.restore();
+}
+
+resize();
+
+const EXPORT_MODE = new URLSearchParams(location.search).get('export') === '1';
+if(EXPORT_MODE){
+  const stage = document.getElementById('stage');
+  stage.style.width = W+'px'; stage.style.height = H+'px'; stage.style.aspectRatio='auto';
+  document.body.style.margin='0';
+  resize();
+  window.__renderFrame = (n) => { frame = n; draw(); };
+  window.__renderFrame(0);
+} else {
+  // 预览播放
+  let last = 0;
+  const loop = (ts) => {
+    if(!last) last = ts;
+    frame = (frame + (ts-last)/1000*FPS) % TOTAL;
+    last = ts;
+    draw();
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

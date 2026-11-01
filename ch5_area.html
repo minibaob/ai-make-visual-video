@@ -67,7 +67,7 @@ function draw(){
 
   // 刻度
   ctx.save();
-  ctx.font='500 15px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
+  ctx.font='500 17px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
   ctx.fillText('0',PX(0)+4,PY(0)+5);
   ctx.fillText('π',PX(Math.PI)-4,PY(0)+5);
   ctx.textAlign='right';ctx.textBaseline='middle';
@@ -101,17 +101,17 @@ function draw(){
   // 面积数值（移到右下角，避免和标题重叠）
   ctx.save();
   ctx.textAlign='right';ctx.textBaseline='bottom';
-  ctx.fillStyle='#FFD93D';ctx.font='700 30px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFD93D';ctx.font='700 40px "JetBrains Mono",monospace';
   ctx.fillText(`近似面积 ≈ ${total.toFixed(3)}`, W-28, H-80);
-  ctx.font='500 22px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  ctx.font='500 26px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
   ctx.fillText(`真实面积 = ${(Math.cos(0)-Math.cos(Math.PI)+1.2*Math.PI).toFixed(3)}`, W-28, H-42);
   ctx.restore();
 
   // 顶部文字
   ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 42px "JetBrains Mono",monospace';
   ctx.fillText('面积问题：积分', 28, 52);
-  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  ctx.font='500 28px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
   if(frame<INTRO_END) ctx.fillText('曲线下的面积怎么算？',28,138);
   else if(N<=8) ctx.fillText(`${N} 个矩形：还很粗糙`,28,138);
   else if(N<=32) ctx.fillText(`${N} 个矩形：明显更准了`,28,138);
@@ -126,9 +126,9 @@ function drawIntro(t){
   ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
   const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD';ctx.font='500 28px "JetBrains Mono",monospace';
   ctx.fillText('第 五 章 · 面 积 问 题', W/2, H*0.4);
-  ctx.fillStyle='#FFFFFF';ctx.font='700 50px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 54px "JetBrains Mono",monospace';
   ctx.fillText('积分：无限细分的累加', W/2, H*0.5);
   ctx.restore();
 }
@@ -138,9 +138,9 @@ function drawOutro(t){
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#83C167';ctx.font='700 40px "JetBrains Mono",monospace';
+  ctx.fillStyle='#83C167';ctx.font='700 44px "JetBrains Mono",monospace';
   ctx.fillText('矩形越细，面积越准', W/2, H*0.72);
-  ctx.fillStyle='#FFD93D';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFD93D';ctx.font='500 30px "JetBrains Mono",monospace';
   ctx.fillText('极限 → 积分', W/2, H*0.72+46);
   ctx.restore();
 }

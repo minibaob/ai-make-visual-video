@@ -92,7 +92,7 @@ function draw(){
   ctx.beginPath(); ctx.moveTo(0,py(L+epsilon())); ctx.lineTo(W,py(L+epsilon())); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(0,py(L-epsilon())); ctx.lineTo(W,py(L-epsilon())); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle='#FFD93D'; ctx.font='500 15px "JetBrains Mono",monospace'; ctx.textAlign='left';
+  ctx.fillStyle='#FFD93D'; ctx.font='500 17px "JetBrains Mono",monospace'; ctx.textAlign='left';
   ctx.fillText(`ε = ${epsilon().toFixed(3)}`, 12, py(L+epsilon())-6);
   ctx.restore();
 
@@ -104,7 +104,7 @@ function draw(){
   ctx.beginPath(); ctx.moveTo(px(a-delta()),0); ctx.lineTo(px(a-delta()),H); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(px(a+delta()),0); ctx.lineTo(px(a+delta()),H); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle='#58C4DD'; ctx.font='500 15px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD'; ctx.font='500 17px "JetBrains Mono",monospace';
   ctx.fillText(`δ = ${delta().toFixed(3)}`, px(a+delta())+6, py(2.4));
   ctx.restore();
 
@@ -114,15 +114,15 @@ function draw(){
   ctx.beginPath(); ctx.arc(axp,lyp,6,0,Math.PI*2); ctx.fill();
   ctx.strokeStyle='#FFFFFF'; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.arc(axp,lyp,10,0,Math.PI*2); ctx.stroke();
-  ctx.fillStyle='#fff'; ctx.font='500 14px "JetBrains Mono",monospace'; ctx.textAlign='left';
+  ctx.fillStyle='#fff'; ctx.font='500 16px "JetBrains Mono",monospace'; ctx.textAlign='left';
   ctx.fillText('L', axp+14, lyp-10);
   ctx.restore();
 
   // 顶部文字
   ctx.save(); ctx.textAlign='left'; ctx.textBaseline='top';
-  ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.font='600 20px "JetBrains Mono",monospace';
+  ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.font='600 24px "JetBrains Mono",monospace';
   ctx.fillText('极限：x→0 时 f(x) 无限接近 L', 20, 46);
-  ctx.font='500 17px "JetBrains Mono",monospace';
+  ctx.font='500 20px "JetBrains Mono",monospace';
   if(frame<INTRO_END){ ctx.fillStyle='#EAEAEA'; ctx.fillText('“无限接近”到底是什么？', 20, 74); }
   else if(frame<P0_END){ ctx.fillStyle='#FFD93D'; ctx.fillText('任给一个 ε，都能找到一个 δ', 20, 74); }
   else if(frame<P1_END){ ctx.fillStyle='#FFD93D'; ctx.fillText('ε 变小，δ 也跟着变小', 20, 74); }
@@ -137,9 +137,9 @@ function drawIntro(t){
   ctx.save(); ctx.fillStyle='#0A0A0F'; ctx.fillRect(0,0,W,H);
   const ease=t<0.25?0:Math.min(1,(t-0.25)/0.5); ctx.globalAlpha=ease;
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillStyle='#58C4DD'; ctx.font='500 22px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD'; ctx.font='500 26px "JetBrains Mono",monospace';
   ctx.fillText('极 限 · 真 正 的 定 义', W/2, H*0.36);
-  ctx.fillStyle='#FFFFFF'; ctx.font='700 52px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF'; ctx.font='700 56px "JetBrains Mono",monospace';
   ctx.fillText('你以为的“无限接近”，', W/2, H*0.48);
   ctx.fillStyle='#FFD93D';
   ctx.fillText('高 中 根 本 没 讲 清', W/2, H*0.48+68);
@@ -152,13 +152,13 @@ function drawOutro(t){
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#FFFFFF';ctx.font='700 40px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 44px "JetBrains Mono",monospace';
   ctx.fillText('∀ ε>0，∃ δ>0', W/2, H*0.70);
-  ctx.fillStyle='#83C167';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillStyle='#83C167';ctx.font='500 30px "JetBrains Mono",monospace';
   ctx.fillText('0<|x−a|<δ ⟹ |f(x)−L|<ε', W/2, H*0.70+44);
-  ctx.fillStyle='#FFD93D';ctx.font='600 28px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFD93D';ctx.font='600 34px "JetBrains Mono",monospace';
   ctx.fillText('这就是极限的全部定义', W/2, H*0.70+98);
-  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 22px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
+  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 26px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
   ctx.restore();
 }
 

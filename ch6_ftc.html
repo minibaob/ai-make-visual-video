@@ -80,7 +80,7 @@ function draw(){
   ctx.beginPath();ctx.moveTo(tx-L,ty+slope*L/1.4*scale/2);ctx.lineTo(tx+L,ty-slope*L/1.4*scale/2);ctx.stroke();
   ctx.fillStyle='#FFD93D';ctx.shadowColor='#FFD93D';ctx.shadowBlur=10;
   ctx.beginPath();ctx.arc(tx,ty,7,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#FFD93D';ctx.font='700 26px "JetBrains Mono",monospace';ctx.textAlign='center';
+  ctx.fillStyle='#FFD93D';ctx.font='700 30px "JetBrains Mono",monospace';ctx.textAlign='center';
   ctx.fillText('微分', lx, H*0.12);
   ctx.fillText('d/dx（变化率）', lx, H*0.88);
   ctx.restore();
@@ -97,7 +97,7 @@ function draw(){
   // 面积填充（黎曼和近似）
   const N=20;const dx=1.4/N;
   for(let i=0;i<N;i++){const x=i*dx;const y=fR(x);const px1=rx+x/1.4*scale;const px2=rx+(x+dx)/1.4*scale;const pyTop=ry-y/2*scale;ctx.fillStyle='rgba(131,193,103,0.25)';ctx.fillRect(px1,pyTop,px2-px1,ry-pyTop);}
-  ctx.fillStyle='#83C167';ctx.font='700 26px "JetBrains Mono",monospace';ctx.textAlign='center';
+  ctx.fillStyle='#83C167';ctx.font='700 30px "JetBrains Mono",monospace';ctx.textAlign='center';
   ctx.fillText('积分', rx, H*0.12);
   ctx.fillText('∫（累积）', rx, H*0.88);
   ctx.restore();
@@ -109,16 +109,16 @@ function draw(){
     ctx.globalAlpha=alpha;
     ctx.fillStyle='#FFFFFF';ctx.font='700 60px "JetBrains Mono",monospace';ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText('=', W/2, cy);
-    ctx.fillStyle='#FFD93D';ctx.font='700 44px "JetBrains Mono",monospace';
+    ctx.fillStyle='#FFD93D';ctx.font='700 48px "JetBrains Mono",monospace';
     ctx.fillText('互 为 逆 运 算', W/2, H*0.80);
     ctx.restore();
   }
 
   // 顶部文字
   ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 42px "JetBrains Mono",monospace';
   ctx.fillText('微积分基本定理', 28, 52);
-  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  ctx.font='500 28px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
   if(frame<INTRO_END) ctx.fillText('微分和积分，是什么关系？',28,138);
   else if(m<0.5) ctx.fillText('一个讲变化，一个讲累积……',28,138);
   else ctx.fillText('它们居然是同一枚硬币的两面',28,138);
@@ -132,9 +132,9 @@ function drawIntro(t){
   ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
   const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD';ctx.font='500 28px "JetBrains Mono",monospace';
   ctx.fillText('第 六 章 · 微 积 分 基 本 定 理', W/2, H*0.4);
-  ctx.fillStyle='#FFFFFF';ctx.font='700 50px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 54px "JetBrains Mono",monospace';
   ctx.fillText('微分和积分，是互逆的', W/2, H*0.5);
   ctx.restore();
 }
@@ -144,9 +144,9 @@ function drawOutro(t){
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#FFD93D';ctx.font='700 46px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFD93D';ctx.font='700 50px "JetBrains Mono",monospace';
   ctx.fillText('d/dx ∫ f = f', W/2, H*0.70);
-  ctx.fillStyle='#83C167';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillStyle='#83C167';ctx.font='500 30px "JetBrains Mono",monospace';
   ctx.fillText('微积分，就此统一', W/2, H*0.70+48);
   ctx.restore();
 }

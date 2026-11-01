@@ -70,7 +70,7 @@ function draw(){
 
   // 刻度数字
   ctx.save();
-  ctx.font='500 15px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
+  ctx.font='500 17px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
   for(let k=-6;k<=6;k++){const x=X0+k*step;const px=W/2+(x-X0)/sp*(W/2);if(px<0||px>W)continue;if(Math.abs(x-X0)<step*0.01)continue;ctx.fillText(fmt(x),px,H/2+5);}
   ctx.textAlign='right';ctx.textBaseline='middle';
   for(let k=-6;k<=6;k++){const y=f(X0)+k*step;const py=H/2-(y-f(X0))/sp*(H/2);if(py<0||py>H)continue;if(Math.abs(y-f(X0))<step*0.01)continue;ctx.fillText(fmt(y),W/2-6,py);}
@@ -92,17 +92,17 @@ function draw(){
   const pxE=W/2+(xEdge-X0)/sp*(W/2);const pyC=H/2-(yC-f(X0))/sp*(H/2);const pyL=H/2-(yL-f(X0))/sp*(H/2);
   ctx.save();ctx.strokeStyle='#FF6B6B';ctx.lineWidth=3;ctx.setLineDash([6,5]);
   ctx.beginPath();ctx.moveTo(pxE,pyC);ctx.lineTo(pxE,pyL);ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle='#FF8A8A';ctx.font='600 18px "JetBrains Mono",monospace';ctx.textAlign='left';
+  ctx.fillStyle='#FF8A8A';ctx.font='600 22px "JetBrains Mono",monospace';ctx.textAlign='left';
   const err=Math.abs(yC-yL);
   ctx.fillText(err<1e-9?'误差→0':`误差 ${err.toFixed(3)}`,pxE+8,(pyC+pyL)/2);ctx.restore();
 
   // 顶部文字
   ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 42px "JetBrains Mono",monospace';
   ctx.fillText('放大直觉：微分的本质',28,52);
-  ctx.font='700 30px "JetBrains Mono",monospace';ctx.fillStyle='#FFD93D';
+  ctx.font='700 40px "JetBrains Mono",monospace';ctx.fillStyle='#FFD93D';
   ctx.fillText(`放大 ${z.toFixed(0)} 倍`,28,96);
-  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  ctx.font='500 28px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
   if(frame<INTRO_END) ctx.fillText('盯着 x=1，不断放大……',28,138);
   else if(z<10) ctx.fillText('曲线开始变直',28,138);
   else ctx.fillText('曲线 ≈ 切线（局部线性）',28,138);
@@ -118,9 +118,9 @@ function drawIntro(t){
   ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
   const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD';ctx.font='500 28px "JetBrains Mono",monospace';
   ctx.fillText('第 二 章 · 放 大 直 觉',W/2,H*0.42);
-  ctx.fillStyle='#FFFFFF';ctx.font='700 50px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 54px "JetBrains Mono",monospace';
   ctx.fillText('放大之后，曲线变直了',W/2,H*0.52);
   ctx.restore();
 }
@@ -129,7 +129,7 @@ function drawOutro(t){
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#83C167';ctx.font='700 40px "JetBrains Mono",monospace';
+  ctx.fillStyle='#83C167';ctx.font='700 44px "JetBrains Mono",monospace';
   ctx.fillText('局部线性：微分的灵魂',W/2,H*0.72);
   ctx.restore();
 }

@@ -71,7 +71,7 @@ function draw(){
 
   // 刻度数字
   ctx.save();
-  ctx.font='500 15px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
+  ctx.font='500 17px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
   for(let x=0;x<=10;x+=2){ctx.fillText(x, PX(x), PY(0)+5);}
   ctx.textAlign='right';ctx.textBaseline='middle';
   for(let y=0;y<=1;y+=0.25){ctx.fillText(y.toFixed(2), PX(0)-6, PY(y));}
@@ -101,15 +101,15 @@ function draw(){
 
   // 增长率标注（随斜率变化）
   ctx.save();
-  ctx.fillStyle='#FFD93D';ctx.font='700 28px "JetBrains Mono",monospace';ctx.textAlign='left';
+  ctx.fillStyle='#FFD93D';ctx.font='700 34px "JetBrains Mono",monospace';ctx.textAlign='left';
   ctx.fillText(`增长率 = ${slope.toFixed(3)}`, tx+14, ty-18);
   ctx.restore();
 
   // 顶部文字
   ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 42px "JetBrains Mono",monospace';
   ctx.fillText('导数的应用：变化率', 28, 52);
-  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  ctx.font='500 28px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
   if(frame<INTRO_END) ctx.fillText('疫情传播有多快？看曲线的斜率',28,138);
   else if(x0<4) ctx.fillText('早期：增长缓慢（切线平缓）',28,138);
   else if(x0<6) ctx.fillText('中期：爆发式增长（切线最陡）',28,138);
@@ -124,9 +124,9 @@ function drawIntro(t){
   ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
   const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD';ctx.font='500 28px "JetBrains Mono",monospace';
   ctx.fillText('第 四 章 · 导 数 的 应 用', W/2, H*0.4);
-  ctx.fillStyle='#FFFFFF';ctx.font='700 50px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 54px "JetBrains Mono",monospace';
   ctx.fillText('变化率的力量', W/2, H*0.5);
   ctx.restore();
 }
@@ -136,7 +136,7 @@ function drawOutro(t){
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#83C167';ctx.font='700 40px "JetBrains Mono",monospace';
+  ctx.fillStyle='#83C167';ctx.font='700 44px "JetBrains Mono",monospace';
   ctx.fillText('导数 = 变化率', W/2, H*0.72);
   ctx.restore();
 }

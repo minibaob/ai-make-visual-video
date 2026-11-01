@@ -243,10 +243,10 @@ function draw(){
   // ---- 顶部公式标注 ----
   ctx.save();
   ctx.textAlign='left'; ctx.textBaseline='top';
-  ctx.font='600 22px "JetBrains Mono","Consolas",monospace';
+  ctx.font='600 26px "JetBrains Mono","Consolas",monospace';
   ctx.fillStyle='rgba(255,255,255,0.95)';
   ctx.fillText('f(x) = x³ − 2x', 20, 46);
-  ctx.font='500 18px "JetBrains Mono","Consolas",monospace';
+  ctx.font='500 22px "JetBrains Mono","Consolas",monospace';
   ctx.fillStyle='#FFD93D';
   ctx.fillText("切线斜率 = f′(x) = 3x² − 2", 20, 78);
   ctx.fillStyle='#FF6B6B';
@@ -289,12 +289,12 @@ function drawIntro(t){
 
   // 小标签
   ctx.fillStyle = '#58C4DD';
-  ctx.font = '500 22px "JetBrains Mono","Consolas",monospace';
+  ctx.font = '500 26px "JetBrains Mono","Consolas",monospace';
   ctx.fillText('导 数 · 几 何 意 义', W/2, H*0.38);
 
   // 主钩子
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '700 56px "JetBrains Mono","Consolas",monospace';
+  ctx.font = '700 60px "JetBrains Mono","Consolas",monospace';
   ctx.fillText('斜率，是函数那一瞬间', W/2, H*0.50);
   ctx.fillStyle = '#FFD93D';
   ctx.fillText('想 要 去 的 方 向', W/2, H*0.50 + 72);
@@ -317,19 +317,19 @@ function drawOutro(t){
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
 
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '700 48px "JetBrains Mono","Consolas",monospace';
+  ctx.font = '700 52px "JetBrains Mono","Consolas",monospace';
   ctx.fillText('f′(x) = lim  [f(x+h) − f(x)] / h', W/2, H*0.78 - 40);
   ctx.fillText('h→0', W/2, H*0.78 + 24);
 
   ctx.fillStyle = '#83C167';
-  ctx.font = '500 26px "JetBrains Mono","Consolas",monospace';
+  ctx.font = '500 30px "JetBrains Mono","Consolas",monospace';
   ctx.fillText('切线，是割线在两点无限靠近时的极限', W/2, H*0.78 + 80);
 
   // 关注引导
   if(t > 0.5){
     ctx.globalAlpha = Math.min(1, (t-0.5)/0.3);
     ctx.fillStyle = '#8a8a9a';
-    ctx.font = '500 22px "JetBrains Mono","Consolas",monospace';
+    ctx.font = '500 26px "JetBrains Mono","Consolas",monospace';
     ctx.fillText('关注 · 每天一个可视化概念', W/2, H*0.90);
   }
   ctx.restore();
@@ -359,7 +359,7 @@ function dot(px,py,color,r){
 
 function label(txt,px,py,color){
   ctx.save();
-  ctx.font='500 14px "JetBrains Mono","Consolas",monospace';
+  ctx.font='500 16px "JetBrains Mono","Consolas",monospace';
   ctx.fillStyle=color;
   ctx.textAlign='left'; ctx.textBaseline='bottom';
   ctx.fillText(txt, px+10, py-8);
@@ -380,7 +380,7 @@ function drawSlopeTriangle(px,py,slope){
   ctx.stroke();
   // 小箭头标注斜率
   ctx.fillStyle='rgba(255,217,61,0.9)';
-  ctx.font='500 13px "JetBrains Mono","Consolas",monospace';
+  ctx.font='500 15px "JetBrains Mono","Consolas",monospace';
   ctx.textAlign='left'; ctx.textBaseline='top';
   const labelY = rise>0 ? py-rise-4 : py+4;
   ctx.fillText('Δy', px+run+6, (py + (py-rise))/2 - 7);

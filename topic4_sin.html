@@ -80,7 +80,7 @@ function draw(){
   // 角度弧
   ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=2;
   ctx.beginPath(); ctx.arc(cx,cy,R*0.28, Math.min(0,-th), Math.max(0,-th)); ctx.stroke();
-  ctx.fillStyle='#fff'; ctx.font='600 18px "JetBrains Mono",monospace'; ctx.textAlign='left';
+  ctx.fillStyle='#fff'; ctx.font='600 22px "JetBrains Mono",monospace'; ctx.textAlign='left';
   ctx.fillText('θ', cx+R*0.36, cy-R*0.14);
 
   // 速度向量（切线方向，加长加粗）
@@ -96,7 +96,7 @@ function draw(){
   ctx.beginPath(); ctx.moveTo(pxr+vx*vt, pyr); ctx.lineTo(pxr+vx*vt, pyr-vy*vt); ctx.stroke();
   ctx.setLineDash([]);
   // 分量标注
-  ctx.fillStyle='#FF6B6B'; ctx.font='600 17px "JetBrains Mono",monospace'; ctx.textAlign='left';
+  ctx.fillStyle='#FF6B6B'; ctx.font='600 20px "JetBrains Mono",monospace'; ctx.textAlign='left';
   ctx.fillText('速度 v', pxr+vx*vt+10, (pyr + pyr-vy*vt)/2);
   ctx.fillStyle='#FFD93D';
   ctx.fillText('竖直分量 = cosθ', pxr+vx*vt+10, pyr-vy*vt+6);
@@ -109,7 +109,7 @@ function draw(){
 
   // sin/cos 投影标签（放在圆的下方，避免拥挤）
   ctx.save();
-  ctx.fillStyle='#FFD93D'; ctx.font='600 17px "JetBrains Mono",monospace'; ctx.textAlign='center';
+  ctx.fillStyle='#FFD93D'; ctx.font='600 20px "JetBrains Mono",monospace'; ctx.textAlign='center';
   ctx.fillText('sinθ（高度）', cx, cy+R+42);
   ctx.fillStyle='#83C167';
   ctx.fillText('cosθ（水平）', cx, cy+R+68);
@@ -124,7 +124,7 @@ function draw(){
   ctx.beginPath(); ctx.moveTo(gx0,gyMid); ctx.lineTo(gx1,gyMid); ctx.stroke();  // x轴
   ctx.beginPath(); ctx.moveTo(gx0,gyMid-amp); ctx.lineTo(gx0,gyMid+amp); ctx.stroke(); // y轴
   // 刻度标记 π/2, π, 3π/2
-  ctx.fillStyle='#8a8a9a'; ctx.font='500 14px "JetBrains Mono",monospace'; ctx.textAlign='center';
+  ctx.fillStyle='#8a8a9a'; ctx.font='500 16px "JetBrains Mono",monospace'; ctx.textAlign='center';
   const marks=[['π/2',0.25],['π',0.5],['3π/2',0.75],['2π',1.0]];
   for(const [lab,fr] of marks){ const mx=gx0+(gx1-gx0)*fr; ctx.beginPath();ctx.moveTo(mx,gyMid-5);ctx.lineTo(mx,gyMid+5);ctx.stroke(); ctx.fillText(lab, mx, gyMid+22); }
 
@@ -171,9 +171,9 @@ function draw(){
 
   // 顶部文字
   ctx.save(); ctx.textAlign='left'; ctx.textBaseline='top';
-  ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.font='600 24px "JetBrains Mono",monospace';
+  ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.font='600 28px "JetBrains Mono",monospace';
   ctx.fillText('sin 的导数 = ?', 24, 48);
-  ctx.font='500 18px "JetBrains Mono",monospace';
+  ctx.font='500 22px "JetBrains Mono",monospace';
   if(frame<INTRO_END){ ctx.fillStyle='#EAEAEA'; ctx.fillText('答案不在公式表里，在圆上',24,80); }
   else if(frame<P0_END){ ctx.fillStyle='#FFD93D'; ctx.fillText('点匀速转，sin 是它的高度',24,80); }
   else if(frame<P1_END){ ctx.fillStyle='#FFD93D'; ctx.fillText('速度的竖直分量 = cosθ',24,80); }
@@ -188,13 +188,13 @@ function drawIntro(t){
   ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
   const ease=t<0.25?0:Math.min(1,(t-0.25)/0.5);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#58C4DD';ctx.font='500 22px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD';ctx.font='500 26px "JetBrains Mono",monospace';
   ctx.fillText('三 角 函 数 · 导 数', W/2, H*0.36);
-  ctx.fillStyle='#FFFFFF';ctx.font='700 50px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 54px "JetBrains Mono",monospace';
   ctx.fillText('为什么 sin 的导数', W/2, H*0.48);
   ctx.fillStyle='#FFD93D';
   ctx.fillText('是 cos ？', W/2, H*0.48+64);
-  ctx.fillStyle='#EAEAEA';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillStyle='#EAEAEA';ctx.font='500 28px "JetBrains Mono",monospace';
   ctx.fillText('—— 答案就藏在单位圆里', W/2, H*0.48+124);
   ctx.restore();
 }
@@ -204,13 +204,13 @@ function drawOutro(t){
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#FFFFFF';ctx.font='700 44px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 48px "JetBrains Mono",monospace';
   ctx.fillText('d/dx sin(x) = cos(x)', W/2, H*0.70);
-  ctx.fillStyle='#83C167';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillStyle='#83C167';ctx.font='500 30px "JetBrains Mono",monospace';
   ctx.fillText('圆的旋转，写下了这个公式', W/2, H*0.70+46);
-  ctx.fillStyle='#FFD93D';ctx.font='600 28px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFD93D';ctx.font='600 34px "JetBrains Mono",monospace';
   ctx.fillText('看懂圆，就懂了一半微积分', W/2, H*0.70+102);
-  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 22px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
+  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 26px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
   ctx.restore();
 }
 

@@ -137,7 +137,7 @@ function draw(){
     ctx.setLineDash([5,5]);
     ctx.beginPath(); ctx.moveTo(pxc,pyc); ctx.lineTo(pxc,pyl); ctx.stroke();
     ctx.fillStyle='#FF6B6B';
-    ctx.font='500 16px "JetBrains Mono",monospace';
+    ctx.font='500 18px "JetBrains Mono",monospace';
     ctx.textAlign='left'; ctx.textBaseline='middle';
     const errText = err < 1e-9 ? '误差 → 0' : `误差 ${err.toFixed(3)}`;
     ctx.fillText(errText, pxc+8, (pyc+pyl)/2);
@@ -148,10 +148,10 @@ function draw(){
   ctx.save();
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillStyle='rgba(255,255,255,0.95)';
-  ctx.font='600 22px "JetBrains Mono",monospace';
+  ctx.font='600 26px "JetBrains Mono",monospace';
   ctx.fillText('f(x) = x²  在 x=1 处', 20, 46);
   ctx.fillStyle='#FFD93D';
-  ctx.font='500 18px "JetBrains Mono",monospace';
+  ctx.font='500 22px "JetBrains Mono",monospace';
   if(frame < P0_END){
     ctx.fillText('曲线在远处是弯的 —— 显然不是直线', 20, 78);
   } else if(frame < P1_END){
@@ -172,13 +172,13 @@ function drawIntro(t){
   const ease = t<0.25?0:Math.min(1,(t-0.25)/0.5);
   ctx.globalAlpha=ease;
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillStyle='#58C4DD'; ctx.font='500 22px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD'; ctx.font='500 26px "JetBrains Mono",monospace';
   ctx.fillText('微 分 · 真 相', W/2, H*0.36);
-  ctx.fillStyle='#FFFFFF'; ctx.font='700 52px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF'; ctx.font='700 56px "JetBrains Mono",monospace';
   ctx.fillText('微分的核心，其实是', W/2, H*0.48);
   ctx.fillStyle='#FFD93D';
   ctx.fillText('一 个 「 谎 言 」', W/2, H*0.48+68);
-  ctx.fillStyle='#EAEAEA'; ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillStyle='#EAEAEA'; ctx.font='500 28px "JetBrains Mono",monospace';
   ctx.fillText('—— 但正是它，撑起了整个现代世界', W/2, H*0.48+130);
   ctx.restore();
 }
@@ -190,13 +190,13 @@ function drawOutro(t){
   ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
   const ease=Math.min(1,t/0.3); ctx.globalAlpha=ease;
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillStyle='#FFFFFF'; ctx.font='700 44px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF'; ctx.font='700 48px "JetBrains Mono",monospace';
   ctx.fillText('“直线近似曲线”并不精确', W/2, H*0.72);
   ctx.fillStyle='#83C167';
   ctx.fillText('但放大到足够小，误差 → 0', W/2, H*0.72+54);
-  ctx.fillStyle='#FFD93D'; ctx.font='600 30px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFD93D'; ctx.font='600 40px "JetBrains Mono",monospace';
   ctx.fillText('这，就是微分的全部秘密', W/2, H*0.72+110);
-  if(t>0.5){ ctx.globalAlpha=Math.min(1,(t-0.5)/0.3); ctx.fillStyle='#8a8a9a'; ctx.font='500 22px "JetBrains Mono",monospace';
+  if(t>0.5){ ctx.globalAlpha=Math.min(1,(t-0.5)/0.3); ctx.fillStyle='#8a8a9a'; ctx.font='500 26px "JetBrains Mono",monospace';
     ctx.fillText('关注 · 每天一个可视化概念', W/2, H*0.90); }
   ctx.restore();
 }

@@ -78,7 +78,7 @@ function draw(){
 
   // 刻度数字（固定范围，不用自适应，因为这里不缩放）
   ctx.save();
-  ctx.font='500 15px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
+  ctx.font='500 17px "JetBrains Mono",monospace';ctx.textBaseline='top';ctx.textAlign='center';ctx.fillStyle='rgba(220,220,235,0.9)';
   for(let x=-2;x<=2;x++){ if(x===0)continue; ctx.fillText(x, PX(x), PY(0)+5); }
   ctx.textAlign='right';ctx.textBaseline='middle';
   for(let y=-2;y<=2;y++){ if(y===0)continue; ctx.fillText(y, PX(0)-6, PY(y)); }
@@ -101,11 +101,11 @@ function draw(){
 
   // 顶部文字
   ctx.save();ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 34px "JetBrains Mono",monospace';
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font='700 42px "JetBrains Mono",monospace';
   ctx.fillText('f(x) = Σ 0.5ⁿ · cos(3ⁿπx)', 28, 52);
-  ctx.font='700 30px "JetBrains Mono",monospace';ctx.fillStyle='#FFD93D';
+  ctx.font='700 40px "JetBrains Mono",monospace';ctx.fillStyle='#FFD93D';
   ctx.fillText(`叠加 ${N} 项`, 28, 96);
-  ctx.font='500 24px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
+  ctx.font='500 28px "JetBrains Mono",monospace';ctx.fillStyle='#EAEAEA';
   if(frame<P0_END) ctx.fillText('先看第 1 项：一条平滑的余弦',28,138);
   else if(frame<P1_END) ctx.fillText('叠加高频项……曲线开始长"尖角"',28,138);
   else if(frame<P2_END) ctx.fillText('尖角越来越多，越来越密',28,138);
@@ -120,9 +120,9 @@ function drawIntro(t){
   ctx.save();ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
   const ease=t<0.05?0:Math.min(1,(t-0.05)/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#58C4DD';ctx.font='500 24px "JetBrains Mono",monospace';
+  ctx.fillStyle='#58C4DD';ctx.font='500 28px "JetBrains Mono",monospace';
   ctx.fillText('数 学 怪 物 · 分 形', W/2, H*0.34);
-  ctx.fillStyle='#FFFFFF';ctx.font='700 52px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 56px "JetBrains Mono",monospace';
   ctx.fillText('一条处处连续、', W/2, H*0.46);
   ctx.fillStyle='#FFD93D';
   ctx.fillText('却处处没有导数的曲线', W/2, H*0.46+62);
@@ -134,13 +134,13 @@ function drawOutro(t){
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
   const ease=Math.min(1,t/0.3);ctx.globalAlpha=ease;
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#FFFFFF';ctx.font='700 42px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 46px "JetBrains Mono",monospace';
   ctx.fillText('放大任何一处，全是尖角', W/2, H*0.70);
-  ctx.fillStyle='#83C167';ctx.font='500 26px "JetBrains Mono",monospace';
+  ctx.fillStyle='#83C167';ctx.font='500 30px "JetBrains Mono",monospace';
   ctx.fillText('它处处连续，却没有一处光滑', W/2, H*0.70+44);
-  ctx.fillStyle='#FFD93D';ctx.font='600 28px "JetBrains Mono",monospace';
+  ctx.fillStyle='#FFD93D';ctx.font='600 34px "JetBrains Mono",monospace';
   ctx.fillText('微积分的直觉，在这里失效了', W/2, H*0.70+100);
-  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 22px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
+  if(t>0.5){ctx.globalAlpha=Math.min(1,(t-0.5)/0.3);ctx.fillStyle='#8a8a9a';ctx.font='500 26px "JetBrains Mono",monospace';ctx.fillText('关注 · 每天一个可视化概念',W/2,H*0.90);}
   ctx.restore();
 }
 

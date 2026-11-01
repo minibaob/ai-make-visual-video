@@ -54,7 +54,7 @@ function draw(){
     ctx.globalAlpha=t;
     const y=H*0.35 + i*H*0.13;
     ctx.fillStyle=i%2===0?'#58C4DD':'#83C167';
-    ctx.font='600 30px "JetBrains Mono",monospace';
+    ctx.font='600 40px "JetBrains Mono",monospace';
     ctx.fillText(items[i], W/2, y);
   }
   ctx.restore();
@@ -63,7 +63,7 @@ function draw(){
   ctx.save();
   const t1=Math.min(1, frame/(FPS*0.6));
   ctx.globalAlpha=t1;
-  ctx.fillStyle='#FFFFFF';ctx.font='700 40px "JetBrains Mono",monospace';ctx.textAlign='center';
+  ctx.fillStyle='#FFFFFF';ctx.font='700 44px "JetBrains Mono",monospace';ctx.textAlign='center';
   ctx.fillText('微积分，无处不在', W/2, H*0.18);
   ctx.restore();
 
@@ -73,7 +73,7 @@ function draw(){
     ctx.save();
     ctx.globalAlpha=t2;
     ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#FFD93D';ctx.font='700 44px "JetBrains Mono",monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#FFD93D';ctx.font='700 48px "JetBrains Mono",monospace';ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText('一切，从一条切线、', W/2, H*0.46);
     ctx.fillText('一块面积开始', W/2, H*0.46+56);
     ctx.restore();
