@@ -122,7 +122,7 @@ pip install -i https://mirrors.aliyun.com/pypi/simple/ numpy edge-tts imageio-ff
 | `cover_polish.html` | 参数化封面生成器（4:3 横版 + 9:16 竖版） |
 | `render_43_covers.js` | 批量渲染封面 |
 | `cover_pi_v.html` / `cover_benford_v.html` | 竖版封面（1080×1920） |
-| `cover_pi_h.html` / `cover_benford_h.html` | 横版封面（1920×1080） |
+| `cover_pi_h.html` / `cover_benford_h.html` | 横版封面（1440×1080，4:3） |
 | `tools/render_pi_cover.js` / `render_benford_cover.js` | 渲染竖版封面 |
 | `tools/render_h_covers.js` | 批量渲染横版封面 |
 

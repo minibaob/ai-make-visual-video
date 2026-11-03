@@ -2,23 +2,23 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>π 弹珠 · 横版封面</title>
+<title>π 弹珠 · 横版封面 4:3</title>
 <style>
   :root{--bg:#0A0A0F;--blue:#58C4DD;--yellow:#FFD93D;--muted:#8a8a9a;}
   *{margin:0;padding:0;box-sizing:border-box;}
   html,body{background:var(--bg);overflow:hidden;font-family:"JetBrains Mono","Consolas",monospace;}
-  #wrap{position:relative;width:1920px;height:1080px;overflow:hidden;
-    background:radial-gradient(75% 95% at 74% 48%, #191a34 0%, #0A0A0F 62%);}
-  .tag{position:absolute;left:104px;top:296px;font-size:30px;letter-spacing:9px;color:var(--blue);}
-  h1{position:absolute;left:100px;top:372px;font-size:110px;font-weight:700;color:#fff;letter-spacing:1px;}
+  #wrap{position:relative;width:1440px;height:1080px;overflow:hidden;
+    background:radial-gradient(70% 90% at 76% 48%, #191a34 0%, #0A0A0F 62%);}
+  .tag{position:absolute;left:78px;top:250px;font-size:26px;letter-spacing:8px;color:var(--blue);}
+  h1{position:absolute;left:74px;top:320px;font-size:92px;font-weight:700;color:#fff;letter-spacing:1px;}
   h1 em{font-style:normal;color:var(--yellow);}
-  .sub{position:absolute;left:104px;top:524px;font-size:42px;color:#B8B8C8;}
-  .formula{position:absolute;left:104px;top:600px;font-size:40px;color:#83C167;letter-spacing:2px;}
-  .pill{position:absolute;left:100px;top:700px;display:inline-flex;align-items:center;gap:18px;
-    height:92px;padding:0 48px;border:3px solid var(--yellow);border-radius:52px;
-    font-size:34px;color:var(--yellow);letter-spacing:2px;}
-  .pill i{width:14px;height:14px;border-radius:50%;background:var(--yellow);}
-  #art{position:absolute;left:940px;top:120px;width:900px;height:840px;}
+  .sub{position:absolute;left:78px;top:460px;font-size:38px;color:#B8B8C8;}
+  .formula{position:absolute;left:78px;top:532px;font-size:32px;color:#83C167;letter-spacing:1px;}
+  .pill{position:absolute;left:74px;top:634px;display:inline-flex;align-items:center;gap:16px;
+    height:80px;padding:0 38px;border:3px solid var(--yellow);border-radius:46px;
+    font-size:29px;color:var(--yellow);letter-spacing:2px;}
+  .pill i{width:13px;height:13px;border-radius:50%;background:var(--yellow);}
+  #art{position:absolute;left:700px;top:130px;width:700px;height:800px;}
 </style>
 </head>
 <body>
@@ -27,16 +27,16 @@
   <h1>撞到第<em>31</em>次</h1>
   <div class="sub">你会看到 π</div>
   <div class="formula">π = 3.14159265358979</div>
-  <canvas id="art" width="900" height="840"></canvas>
+  <canvas id="art" width="700" height="800"></canvas>
   <div class="pill"><i></i>20 秒，一颗弹珠讲完 π</div>
 </div>
 <script>
 const cv=document.getElementById('art');
 const ctx=cv.getContext('2d');
-const W=900,H=840;
-const CY=418;
-const RP1=172, RP2=95;
-const CX1=708, CX2=418;
+const W=700,H=800;
+const CY=392;
+const RP1=146, RP2=80;
+const CX1=548, CX2=306;
 
 function ball(cx,cy,R,cIn,cMid,cOut){
   const g=ctx.createRadialGradient(cx-R*0.32,cy-R*0.36,R*0.08,cx,cy,R*1.02);
@@ -48,26 +48,25 @@ function ball(cx,cy,R,cIn,cMid,cOut){
 }
 
 ctx.strokeStyle='rgba(150,150,190,0.14)'; ctx.lineWidth=2;
-ctx.beginPath(); ctx.moveTo(0,CY+RP1+34); ctx.lineTo(W,CY+RP1+34); ctx.stroke();
+ctx.beginPath(); ctx.moveTo(0,CY+RP1+32); ctx.lineTo(W,CY+RP1+32); ctx.stroke();
 
-const wx=72;
-ctx.strokeStyle='rgba(220,220,240,0.55)'; ctx.lineWidth=9; ctx.lineCap='round';
-ctx.beginPath(); ctx.moveTo(wx,CY-RP1-40); ctx.lineTo(wx,CY+RP1+44); ctx.stroke();
-for(let y=CY-RP1-24; y<CY+RP1+44; y+=34){
+const wx=62;
+ctx.strokeStyle='rgba(220,220,240,0.55)'; ctx.lineWidth=8; ctx.lineCap='round';
+ctx.beginPath(); ctx.moveTo(wx,CY-RP1-38); ctx.lineTo(wx,CY+RP1+42); ctx.stroke();
+for(let y=CY-RP1-24; y<CY+RP1+42; y+=32){
   ctx.strokeStyle='rgba(180,180,210,0.26)'; ctx.lineWidth=3;
-  ctx.beginPath(); ctx.moveTo(wx-26,y+16); ctx.lineTo(wx,y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(wx-22,y+14); ctx.lineTo(wx,y); ctx.stroke();
 }
 
-const cx2=CX2, cx1=CX1;
-ball(cx1,CY,RP1,'#9FE7F8','#58C4DD','#2A6E80');
-ball(cx2,CY,RP2,'#FFF0A8','#FFD93D','#8A6A0F');
+ball(CX1,CY,RP1,'#9FE7F8','#58C4DD','#2A6E80');
+ball(CX2,CY,RP2,'#FFF0A8','#FFD93D','#8A6A0F');
 
-ctx.font='700 '+Math.round(RP1*0.28)+'px "JetBrains Mono",monospace';
+ctx.font='700 '+Math.round(RP1*0.26)+'px "JetBrains Mono",monospace';
 ctx.fillStyle='#0E2A33'; ctx.textAlign='center'; ctx.textBaseline='middle';
-ctx.fillText('100x',cx1,CY);
-ctx.font='700 '+Math.round(RP2*0.32)+'px "JetBrains Mono",monospace';
+ctx.fillText('100x',CX1,CY);
+ctx.font='700 '+Math.round(RP2*0.30)+'px "JetBrains Mono",monospace';
 ctx.fillStyle='#4A3A00';
-ctx.fillText('1x',cx2,CY);
+ctx.fillText('1x',CX2,CY);
 </script>
 </body>
 </html>
