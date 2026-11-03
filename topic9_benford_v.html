@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>本福特定律 · 竖屏</title>
+<style>
+  :root{--bg:#0A0A0F;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;align-items:center;justify-content:center;}
+  #stage{width:540px;aspect-ratio:9/16;background:var(--bg);overflow:hidden;}
+  canvas{display:block;width:100%;height:100%;}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="cv"></canvas></div>
+<script>
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+const DPR=2;
+const W=1080, H=1920;
+function resize(){ cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); }
+
+const FPS=30, TOTAL=660;
+let frame=0;
+
+const C={blue:'#58C4DD',yellow:'#FFD93D',white:'#FFFFFF',muted:'#8a8a9a',green:'#83C167'};
+const cl=(v,a=0,b=1)=>Math.min(1,Math.max(0,(v-a)/(b-a)));
+const easeOut=t=>1-Math.pow(1-t,3);
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+/* ---------- 本福特定律理论值 ---------- */
+const THEORY=[0,0.30103,0.17609,0.12494,0.09691,0.07918,0.06695,0.05799,0.05115,0.04576];
+
+/* ---------- 三组真实数据：BigInt 精确计算首位数 ---------- */
+function pow2Digits(n){
+  const o=[]; let p=2n;
+  for(let i=0;i<n;i++){ o.push(Number(p.toString()[0])); p*=2n; }
+  return o;
+}
+function factDigits(n){
+  const o=[]; let f=1n;
+  for(let i=1;i<=n;i++){ f*=BigInt(i); o.push(Number(f.toString()[0])); }
+  return o;
+}
+function fibDigits(n){
+  const o=[]; let a=1n,b=1n;
+  for(let i=0;i<n;i++){ o.push(Number(a.toString()[0])); const c=a+b; a=b; b=c; }
+  return o;
+}
+const DATA={
+  pow2: pow2Digits(300),
+  fact: factDigits(300),
+  fib:  fibDigits(300)
+};
+
+function freqAt(arr,n){
+  const c=new Array(10).fill(0);
+  for(let i=0;i<n&&i<arr.length;i++) c[arr[i]]++;
+  const out=new Array(10).fill(0);
+  for(let k=1;k<=9;k++) out[k]= c[k]/Math.max(n,1);
+  return out;
+}
+
+/* ---------- 时间轴 ---------- */
+const T_HOOK=2.8;
+const DS=[
+  {key:'pow2', name:'2 的幂',    sub:'2¹ 到 2³⁰⁰',   a:4.4,  b:8.2},
+  {key:'fact', name:'阶乘',      sub:'1! 到 300!',    a:8.4,  b:12.2},
+  {key:'fib',  name:'斐波那契',  sub:'F₁ 到 F₃₀₀',   a:12.4, b:16.2}
+];
+const T_LOCK=16.4;
+const T_OUT=18.3;
+
+/* ---------- 布局 ---------- */
+const BASE_Y=1420, H_MAX=680, P_MAX=0.30103;
+const SLOT=100, X0=90, BW=62;
+const barX=i=>X0+i*SLOT+SLOT/2;
+const barH=p=>p/P_MAX*H_MAX;
+
+/* ---------- 绘制工具 ---------- */
+function txt(s,x,y,o){
+  o=o||{};
+  const size=o.size||30, color=o.color||C.white, weight=o.weight||500,
+        align=o.align||'center', alpha=(o.alpha===undefined?1:o.alpha), blur=o.blur||0;
+  if(alpha<=0.003) return;
+  ctx.save(); ctx.globalAlpha=alpha;
+  ctx.font=weight+' '+size+'px "JetBrains Mono","Consolas",monospace';
+  ctx.fillStyle=color; ctx.textAlign=align; ctx.textBaseline='middle';
+  if(blur){ctx.shadowColor=color; ctx.shadowBlur=blur;}
+  ctx.fillText(s,x,y); ctx.restore();
+}
+
+function roundTopRect(x,y,w,h,r){
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x,y,w,h,[r,r,0,0]);
+  else { ctx.moveTo(x,y+h); ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.lineTo(x+w-r,y);
+         ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h); ctx.closePath(); }
+}
+
+function draw(){
+  const t=frame/FPS;
+  ctx.clearRect(0,0,W,H);
+
+  /* 背景 */
+  const bg=ctx.createRadialGradient(W*0.5,900,120,W*0.5,1200,1400);
+  bg.addColorStop(0,'#151529'); bg.addColorStop(1,'#0A0A0F');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  /* 当前实际频率 */
+  let cur=new Array(10).fill(0);
+  let dsIdx=-1, progress=0;
+  for(let i=0;i<DS.length;i++){
+    if(t>=DS[i].a-0.35 && t<=DS[i].b+0.3){ dsIdx=i; break; }
+  }
+
+  if(dsIdx<0){
+    cur=THEORY.slice();
+  }else{
+    const d=DS[dsIdx];
+    const p=cl(t,d.a,d.b);
+    const n=Math.round(8+(300-8)*p);
+    const f=freqAt(DATA[d.key], n);
+    const blend=cl(t,d.a-0.32,d.a+0.05);
+    let prev;
+    if(dsIdx>0) prev=freqAt(DATA[DS[dsIdx-1].key],300);
+    else prev=THEORY;
+    for(let k=1;k<=9;k++) cur[k]=lerp(prev[k], f[k], blend);
+    progress=p;
+  }
+
+  const locked = t>T_LOCK;
+
+  /* 基线 */
+  ctx.save();
+  ctx.strokeStyle='rgba(160,160,200,0.22)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(50,BASE_Y); ctx.lineTo(W-50,BASE_Y); ctx.stroke();
+  ctx.restore();
+
+  /* 柱子 */
+  const isData = dsIdx>=0;
+  for(let k=1;k<=9;k++){
+    const i=k-1;
+    const g0=cl(t, 0.10+i*0.035, 0.72+i*0.035);
+    const grow = 0.75 + 0.25*easeOut(g0);
+    const pv = cur[k]*grow;
+    const hh = barH(pv);
+    const x = barX(i)-BW/2;
+    const isOne = (k===1);
+
+    ctx.save();
+    const grad=ctx.createLinearGradient(0,BASE_Y-hh,0,BASE_Y);
+    if(isOne){
+      grad.addColorStop(0,'#FFD93D'); grad.addColorStop(1,'rgba(255,217,61,0.22)');
+    }else{
+      grad.addColorStop(0,'#58C4DD'); grad.addColorStop(1,'rgba(88,196,221,0.16)');
+    }
+    ctx.fillStyle=grad;
+    if(isOne){ ctx.shadowColor='rgba(255,217,61,0.55)'; ctx.shadowBlur=26; }
+    roundTopRect(x,BASE_Y-hh,BW,Math.max(hh,1),8);
+    ctx.fill();
+    ctx.restore();
+
+    /* 理论参考线 */
+    const th=barH(THEORY[k]*grow);
+    ctx.save();
+    ctx.strokeStyle = isOne ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.42)';
+    ctx.lineWidth=3; ctx.setLineDash([7,6]);
+    ctx.beginPath();
+    ctx.moveTo(barX(i)-BW/2, BASE_Y-th);
+    ctx.lineTo(barX(i)+BW/2, BASE_Y-th);
+    ctx.stroke();
+    ctx.restore();
+
+    /* 数字 */
+    txt(String(k), barX(i), BASE_Y+46, {size:44, weight:700, color:isOne?C.yellow:'#C8C8D8', alpha:cl(t,0.05+i*0.04,0.4+i*0.04)});
+
+    /* 百分比 */
+    const pctA=cl(t, 0.55+i*0.04, 0.95+i*0.04);
+    if(pctA>0){
+      const v=(pv*100);
+      txt(v.toFixed(1)+'%', barX(i), BASE_Y-hh-26, {
+        size:isOne?30:22, weight:700,
+        color:isOne?C.yellow:'#9FB6C8', alpha:pctA
+      });
+    }
+  }
+
+  /* 顶部压暗 */
+  const scrim=ctx.createLinearGradient(0,0,0,620);
+  scrim.addColorStop(0,'rgba(10,10,15,0.96)');
+  scrim.addColorStop(0.62,'rgba(10,10,15,0.72)');
+  scrim.addColorStop(1,'rgba(10,10,15,0)');
+  ctx.fillStyle=scrim; ctx.fillRect(0,0,W,620);
+
+  /* 开场钩子：第 0 帧即完整 */
+  if(t<3.1){
+    const a=1-cl(t,2.3,3.0);
+    txt('本 福 特 定 律',W/2,262,{size:24,color:C.blue,alpha:a*0.95});
+    txt('你以为 1 到 9 平分',W/2,362,{size:56,weight:700,alpha:a});
+    txt('1 却占了 30%',W/2,452,{size:72,weight:700,color:C.yellow,alpha:a});
+  }
+
+  /* 常驻 HUD */
+  const hudA=cl(t,2.6,3.2)*(1-cl(t,T_OUT-0.6,T_OUT-0.1));
+  if(hudA>0){
+    txt('首位数字的出现概率',W/2,300,{size:30,color:C.blue,alpha:hudA*0.92});
+    if(dsIdx>=0){
+      const d=DS[dsIdx];
+      const n=Math.round(8+(300-8)*progress);
+      txt(d.name+'  ·  '+d.sub, W/2, 372, {size:32, weight:700, alpha:hudA});
+      txt('已数 '+n+' / 300 个数', W/2, 424, {size:24, color:C.muted, alpha:hudA*0.9});
+    }else if(t>3.2){
+      txt('理论上应该有这么多',W/2,372,{size:30,color:'#C8C8D8',alpha:hudA*0.95});
+    }
+  }
+
+  /* 图例 */
+  const legA=cl(t,4.6,5.4)*(1-cl(t,T_OUT-0.6,T_OUT-0.1));
+  if(legA>0){
+    ctx.save(); ctx.globalAlpha=legA*0.85;
+    ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=3; ctx.setLineDash([7,6]);
+    ctx.beginPath(); ctx.moveTo(331,1550); ctx.lineTo(391,1550); ctx.stroke();
+    ctx.restore();
+    txt('理论值',403,1550,{size:22,color:'#9FB6C8',align:'left',alpha:legA*0.85});
+    ctx.save(); ctx.globalAlpha=legA*0.85; ctx.fillStyle='rgba(88,196,221,0.75)';
+    ctx.fillRect(628,1540,26,20); ctx.restore();
+    txt('实测值',666,1550,{size:22,color:C.muted,align:'left',alpha:legA*0.85});
+  }
+
+  /* 结尾 */
+  if(t>T_OUT-0.35){
+    const o=cl(t,T_OUT-0.35,T_OUT+0.75);
+    ctx.save();
+    ctx.fillStyle='rgba(10,10,15,'+easeOut(o).toFixed(3)+')';
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+
+    const s1=cl(t,T_OUT+0.35,T_OUT+0.95);
+    txt('三组完全不同的数',W/2,H*0.30,{size:34,color:'#C8C8D8',alpha:easeOut(s1)});
+    txt('同一个形状',W/2,H*0.355,{size:46,weight:700,alpha:easeOut(s1)});
+
+    const s2=cl(t,T_OUT+1.0,T_OUT+1.6);
+    txt('数字会撒谎',W/2,H*0.47,{size:44,weight:700,color:C.muted,alpha:easeOut(s2)});
+    txt('首位数字不会',W/2,H*0.525,{size:44,weight:700,alpha:easeOut(cl(t,T_OUT+1.5,T_OUT+2.1))});
+
+    const s3=cl(t,T_OUT+1.7,T_OUT+2.3);
+    txt('所以查账的第一步',W/2,H*0.645,{size:30,color:C.blue,alpha:easeOut(s3)});
+    txt('就是看这条曲线对不对',W/2,H*0.685,{size:34,weight:700,color:C.yellow,alpha:easeOut(cl(t,T_OUT+2.1,T_OUT+2.7))});
+
+    txt('关注 · 每天一个可视化概念',W/2,H*0.775,{size:25,color:C.muted,alpha:easeOut(cl(t,T_OUT+2.6,T_OUT+3.2))});
+  }
+}
+
+resize();
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const stage=document.getElementById('stage');
+  stage.style.width=W+'px'; stage.style.height=H+'px'; stage.style.aspectRatio='auto';
+  document.body.style.margin='0';
+  resize();
+  window.__renderFrame=(n)=>{ frame=n; draw(); };
+  window.__renderFrame(0);
+}else{
+  let last=0;
+  const loop=(ts)=>{
+    if(!last) last=ts;
+    frame=(frame+(ts-last)/1000*FPS)%TOTAL;
+    last=ts; draw();
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中心极限定理 · 换一个起点</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> CH3 / 换一个起点</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){
+  const s=document.getElementById('stage');const r=s.getBoundingClientRect();
+  W=Math.round(r.width)||960;H=Math.round(r.height)||540;
+  cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30, TOTAL=2700;
+let frame=0;
+const cl=(v,a=0,b=1)=>Math.min(1,Math.max(0,(v-a)/(b-a)));
+const easeOut=t=>1-Math.pow(1-t,3);
+const lerp=(a,b,t)=>a+(b-a)*t;
+const C={bg:'#0A0A0F',blue:'#58C4DD',green:'#83C167',yellow:'#FFD93D',red:'#FF6B6B',text:'#EAEAEA',muted:'#8a8a9a'};
+
+function text(str,x,y,o){
+  o=o||{};
+  const size=o.size||24,color=o.color||C.text,weight=o.weight||500,
+        align=o.align||'center',baseline=o.baseline||'middle',
+        alpha=(o.alpha===undefined?1:o.alpha),blur=o.blur||0;
+  if(alpha<=0.002)return;
+  ctx.save();ctx.globalAlpha=alpha;
+  ctx.font=weight+' '+size+'px "JetBrains Mono","Consolas",monospace';
+  ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline=baseline;
+  if(blur){ctx.shadowColor=color;ctx.shadowBlur=blur;}
+  ctx.fillText(str,x,y);ctx.restore();
+}
+
+/* ================= 分布引擎 ================= */
+const NGRID=401, XMIN_G=-30, DX_G=60/(NGRID-1), CENTER=(NGRID-1)/2;
+
+const RAW={
+  uniform:x=>Math.abs(x)<Math.sqrt(3)?1:0,
+  exp:x=>x>-1?Math.exp(-(x+1)):0,
+  bimodal:x=>Math.exp(-Math.pow(x+1.75,2)/(2*0.45))+Math.exp(-Math.pow(x-1.75,2)/(2*0.45)),
+  skew:x=>x>-2.6?Math.pow(x+2.6,2)*Math.exp(-(x+2.6))/2:0
+};
+
+function normalizeRaw(fn){
+  const a=new Float64Array(NGRID);
+  for(let i=0;i<NGRID;i++)a[i]=fn(XMIN_G+i*DX_G);
+  let s=0,m=0;
+  for(let i=0;i<NGRID;i++){s+=a[i];m+=(XMIN_G+i*DX_G)*a[i];}
+  if(s<=0)return a;
+  m/=s;
+  let v=0;
+  for(let i=0;i<NGRID;i++){const x=XMIN_G+i*DX_G;v+=a[i]*(x-m)*(x-m);}
+  v/=s;const sd=Math.sqrt(v)||1;
+  // 重采样到均值 0、标准差 1
+  const b=new Float64Array(NGRID);
+  for(let j=0;j<NGRID;j++){
+    const zx=XMIN_G+j*DX_G;        // 目标（标准化后）坐标
+    const xs=zx*sd+m;              // 对应原坐标
+    const fi=(xs-XMIN_G)/DX_G;
+    const i0=Math.floor(fi);
+    if(i0<0||i0>=NGRID-1){b[j]=0;continue;}
+    const tt=fi-i0;
+    b[j]=a[i0]*(1-tt)+a[i0+1]*tt;
+  }
+  let s2=0;for(let j=0;j<NGRID;j++)s2+=b[j];
+  if(s2>0)for(let j=0;j<NGRID;j++)b[j]/=s2;
+  return b;
+}
+
+function conv(a,b){
+  const c=new Float64Array(NGRID);
+  for(let i=0;i<NGRID;i++){
+    const ai=a[i];if(ai===0)continue;
+    for(let j=0;j<NGRID;j++){
+      const bj=b[j];if(bj===0)continue;
+      const k=i+j-CENTER;
+      if(k>=0&&k<NGRID)c[k]+=ai*bj;
+    }
+  }
+  let s=0;for(let k=0;k<NGRID;k++)s+=c[k];
+  if(s>0)for(let k=0;k<NGRID;k++)c[k]/=s;
+  return c;
+}
+
+/* 预计算：每个原始分布，n = 1..40 的叠加结果 */
+const N_STEPS=[1,2,3,5,8,15,25,40];
+const SERIES={};
+Object.keys(RAW).forEach(key=>{
+  const base=normalizeRaw(RAW[key]);
+  const arr=[base];
+  for(let k=1;k<=40;k++)arr.push(conv(arr[k-1],base));
+  SERIES[key]={base:base,steps:{}};
+  N_STEPS.forEach(n=>{SERIES[key].steps[n]=arr[n];});
+});
+
+const PANELS=[
+  {key:'uniform', name:'均匀分布', tag:'骰子 · 随机数'},
+  {key:'exp',     name:'指数分布', tag:'等待时间'},
+  {key:'bimodal', name:'双峰分布', tag:'两个人群'},
+  {key:'skew',    name:'偏斜分布', tag:'收入 · 房价'}
+];
+
+const SEQ=[
+  {n:1,  a:11.5, b:20.0},
+  {n:2,  a:20.0, b:28.0},
+  {n:3,  a:28.0, b:36.0},
+  {n:5,  a:36.0, b:44.0},
+  {n:8,  a:44.0, b:50.0},
+  {n:15, a:50.0, b:56.0},
+  {n:25, a:56.0, b:61.0},
+  {n:40, a:61.0, b:69.0}
+];
+
+/* 按 n 绘制一条密度曲线（z 轴 [-4,4]） */
+function plotDensity(arr,n,x0,w,baseY,maxH,alpha,color,lw,fill){
+  const sd=Math.sqrt(n);
+  const zx=z=>x0+w*0.5+z/8*w*0.96;
+  // 找峰值
+  let pmax=0;
+  for(let i=0;i<NGRID;i++)if(arr[i]>pmax)pmax=arr[i];
+  if(pmax<=0)return;
+  ctx.save();ctx.globalAlpha=alpha;
+  const pts=[];
+  for(let i=0;i<NGRID;i++){
+    if(arr[i]<=0)continue;
+    const xg=XMIN_G+i*DX_G;
+    const z=xg/sd;
+    if(z<-4.2||z>4.2)continue;
+    pts.push([zx(z),baseY-maxH*(arr[i]/pmax)]);
+  }
+  if(pts.length<2){ctx.restore();return;}
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0],baseY);
+  for(const p of pts)ctx.lineTo(p[0],p[1]);
+  ctx.lineTo(pts[pts.length-1][0],baseY);
+  ctx.closePath();
+  if(fill){
+    const g=ctx.createLinearGradient(0,baseY-maxH,0,baseY);
+    g.addColorStop(0,color);g.addColorStop(1,'rgba(88,196,221,0.03)');
+    ctx.fillStyle=g;ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);
+  ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.lineJoin='round';
+  if(lw>=3){ctx.shadowColor=color;ctx.shadowBlur=12;}
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawStdNormal(x0,w,baseY,maxH,alpha,color){
+  if(alpha<=0.002)return;
+  const zx=z=>x0+w*0.5+z/8*w*0.96;
+  ctx.save();ctx.globalAlpha=alpha;
+  ctx.beginPath();
+  for(let i=0;i<=200;i++){
+    const z=-4+8*i/200;
+    const y=baseY-maxH*Math.exp(-z*z/2);
+    i===0?ctx.moveTo(zx(z),y):ctx.lineTo(zx(z),y);
+  }
+  ctx.strokeStyle=color;ctx.lineWidth=2.6;ctx.setLineDash([9,7]);
+  ctx.shadowColor=color;ctx.shadowBlur=10;
+  ctx.stroke();ctx.restore();
+}
+
+function draw(){
+  const t=frame/FPS;
+  ctx.clearRect(0,0,W,H);
+
+  if(t<5.6){
+    const a=easeOut(cl(t,0.3,1.5))*(1-cl(t,4.6,5.6));
+    text('第 三 章',W/2,H*0.38,{size:26,color:C.blue,alpha:a});
+    text('换掉起点，还成立吗',W/2,H*0.48,{size:56,weight:700,alpha:a,blur:18});
+    text('四个完全不同的分布，各叠加 40 次',W/2,H*0.59,{size:24,color:C.muted,alpha:easeOut(cl(t,1.6,3.0))*(1-cl(t,4.6,5.6))});
+    return;
+  }
+
+  /* 面板布局 */
+  const marginX=W*0.055, gap=W*0.016;
+  const pw=(W-marginX*2-gap*3)/4;
+  const py=H*0.245, ph=H*0.575;
+  const baseY=py+ph-42;
+  const maxH=ph*0.56;
+
+  const fadeSec=0.7;
+
+  PANELS.forEach((p,i)=>{
+    const app=easeOut(cl(t,5.8+i*0.45,7.0+i*0.45));
+    if(app<=0.002)return;
+    const x0=marginX+i*(pw+gap);
+
+    ctx.save();ctx.globalAlpha=app*(1-cl(t,75.0,77.0));
+    // 面板框
+    ctx.fillStyle='rgba(16,16,26,0.62)';
+    ctx.strokeStyle='rgba(70,70,105,0.30)';ctx.lineWidth=1.4;
+    ctx.beginPath();
+    if(ctx.roundRect)ctx.roundRect(x0,py,pw,ph,10);else ctx.rect(x0,py,pw,ph);
+    ctx.fill();ctx.stroke();
+    ctx.restore();
+
+    // 名称
+    text(p.name,x0+pw/2,py+46,{size:23,weight:700,align:'center',alpha:app});
+    text(p.tag,x0+pw/2,py+78,{size:17,color:C.muted,align:'center',alpha:app*0.9});
+
+    // 原始分布迷你图
+    const miniBase=py+186;
+    plotDensity(SERIES[p.key].base,1,x0,pw,miniBase,66,app*0.5,C.muted,1.8,false);
+    ctx.save();ctx.globalAlpha=app*0.22;ctx.strokeStyle=C.muted;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x0+pw*0.06,miniBase);ctx.lineTo(x0+pw*0.94,miniBase);ctx.stroke();ctx.restore();
+
+    // 当前 n 的分布
+    let curS=null,curA=0;
+    SEQ.forEach(s=>{
+      if(t<s.a-fadeSec||t>s.b+fadeSec)return;
+      const fin=cl(t,s.a,s.a+fadeSec),fout=1-cl(t,s.b,s.b+fadeSec);
+      const a=easeOut(fin)*fout;
+      if(a<=0.004)return;
+      if(a>curA){curA=a;curS=s;}
+    });
+
+    if(curS){
+      plotDensity(SERIES[p.key].steps[curS.n],curS.n,x0,pw,baseY,maxH,app*curA,'#58C4DD',3.4,true);
+    }
+
+    // 标准正态虚线
+    const na=cl(t,66.0,69.0);
+    if(na>0){
+      drawStdNormal(x0+0,pw,baseY,maxH,app*na*0.95,'#FFD93D');
+    }
+
+    // 面板内 n 标注
+    if(t>10){
+      text('n = '+(curS?curS.n:1),x0+pw/2,baseY+30,{size:20,color:C.blue,align:'center',alpha:app*0.95});
+    }
+  });
+
+  /* 顶部标题 */
+  text('换掉起点，还成立吗',72,96,{size:42,weight:700,align:'left'});
+  let cap='四个起点，四种脾气——完全不同';
+  if(t>20)cap='各叠加 2 次：形状开始互相靠近';
+  if(t>36)cap='各叠加 5 次：已经认不出原来的样子';
+  if(t>50)cap='各叠加 15 次：全都鼓成了同一个形状';
+  if(t>61)cap='各叠加 40 次：四条曲线重合';
+  text(cap,72,150,{size:28,align:'left'});
+
+  /* 右侧总结 */
+  const sa=cl(t,67.0,70.0);
+  if(sa>0){
+    text('同一条曲线',W-72,H*0.215,{size:26,color:C.yellow,align:'right',alpha:easeOut(sa)});
+  }
+
+  /* 结语 */
+  const s1=cl(t,75.5,78.0);
+  if(s1>0){
+    ctx.save();ctx.fillStyle='rgba(10,10,15,'+(1*easeOut(s1)).toFixed(3)+')';
+    ctx.fillRect(0,0,W,H);ctx.restore();
+    text('起点的形状，被彻底忘掉了',W/2,H*0.38,{size:34,color:C.muted,alpha:easeOut(cl(t,75.8,77.6))});
+    text('只剩下两样东西：均值和方差',W/2,H*0.49,{size:50,weight:700,alpha:easeOut(s1),blur:18});
+    text('这就是为什么，一条曲线能统治那么多领域',W/2,H*0.62,{size:24,color:C.blue,alpha:easeOut(cl(t,78.5,81.0))});
+  }
+}
+
+function setFrame(n){frame=n;draw();}
+const state={last:0};let playFrame=0;
+function loop(ts){
+  const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;
+  playFrame+=dt*FPS;
+  if(playFrame>TOTAL+60)playFrame=0;
+  setFrame(Math.floor(playFrame));
+  requestAnimationFrame(loop);
+}
+document.getElementById('reset').addEventListener('click',()=>{playFrame=0;setFrame(0);});
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');
+  s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';
+  s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';
+  document.getElementById('controls').style.display='none';
+  document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中心极限定理 · 它在哪里</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> CH5 / 它在哪里</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){
+  const s=document.getElementById('stage');const r=s.getBoundingClientRect();
+  W=Math.round(r.width)||960;H=Math.round(r.height)||540;
+  cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30, TOTAL=1620;
+let frame=0;
+const cl=(v,a=0,b=1)=>Math.min(1,Math.max(0,(v-a)/(b-a)));
+const easeOut=t=>1-Math.pow(1-t,3);
+const lerp=(a,b,t)=>a+(b-a)*t;
+const C={bg:'#0A0A0F',blue:'#58C4DD',green:'#83C167',yellow:'#FFD93D',red:'#FF6B6B',text:'#EAEAEA',muted:'#8a8a9a'};
+
+function text(str,x,y,o){
+  o=o||{};
+  const size=o.size||24,color=o.color||C.text,weight=o.weight||500,
+        align=o.align||'center',baseline=o.baseline||'middle',
+        alpha=(o.alpha===undefined?1:o.alpha),blur=o.blur||0;
+  if(alpha<=0.002)return;
+  ctx.save();ctx.globalAlpha=alpha;
+  ctx.font=weight+' '+size+'px "JetBrains Mono","Consolas",monospace';
+  ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline=baseline;
+  if(blur){ctx.shadowColor=color;ctx.shadowBlur=blur;}
+  ctx.fillText(str,x,y);ctx.restore();
+}
+
+/* 曲线参数（每帧按 W/H 现算） */
+function geom(){
+  return {cx:W*0.5, baseY:H*0.80, maxH:H*0.40, halfW:W*0.30};
+}
+function curvePt(z){
+  const G=geom();
+  return [G.cx+z*G.halfW/3, G.baseY-G.maxH*Math.exp(-z*z/2)];
+}
+
+const ITEMS=[
+  {t1:'身高、血压',t2:'生理指标',  pos:[0.165,0.315], z:-1.72},
+  {t1:'测量误差',  t2:'实验科学',  pos:[0.155,0.660], z:-1.02},
+  {t1:'资产收益',  t2:'金融定价',  pos:[0.845,0.660], z:1.02},
+  {t1:'神经网络',  t2:'初始化权重',pos:[0.835,0.315], z:1.72},
+  {t1:'质量抽检',  t2:'工业质检',  pos:[0.500,0.185], z:0.00}
+];
+
+function draw(){
+  const t=frame/FPS;
+  ctx.clearRect(0,0,W,H);
+
+  if(t<5.6){
+    const a=easeOut(cl(t,0.3,1.5))*(1-cl(t,4.6,5.6));
+    text('第 五 章',W/2,H*0.38,{size:26,color:C.blue,alpha:a});
+    text('它藏在什么地方',W/2,H*0.48,{size:56,weight:700,alpha:a,blur:18});
+    text('凡是有误差、有平均、有求和的地方',W/2,H*0.59,{size:24,color:C.muted,alpha:easeOut(cl(t,1.6,3.0))*(1-cl(t,4.6,5.6))});
+    return;
+  }
+
+  const G=geom();
+  const fade=1-cl(t,36.0,39.0);
+
+  /* 曲线 */
+  const ca=easeOut(cl(t,5.8,8.0))*fade;
+  if(ca>0){
+    ctx.save();ctx.globalAlpha=ca;
+    const g=ctx.createLinearGradient(0,G.baseY-G.maxH,0,G.baseY);
+    g.addColorStop(0,'rgba(88,196,221,0.30)');g.addColorStop(1,'rgba(88,196,221,0.02)');
+    ctx.beginPath();
+    for(let i=0;i<=240;i++){
+      const z=-3.4+6.8*i/240;
+      const [x,y]=curvePt(z);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    const [ex]=curvePt(3.4);const [sx]=curvePt(-3.4);
+    ctx.lineTo(ex,G.baseY);ctx.lineTo(sx,G.baseY);ctx.closePath();
+    ctx.fillStyle=g;ctx.fill();
+
+    ctx.beginPath();
+    for(let i=0;i<=240;i++){
+      const z=-3.4+6.8*i/240;
+      const [x,y]=curvePt(z);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle=C.blue;ctx.lineWidth=4;ctx.shadowColor=C.blue;ctx.shadowBlur=16;
+    ctx.stroke();ctx.restore();
+  }
+
+  /* 标注 */
+  ITEMS.forEach((it,i)=>{
+    const a=easeOut(cl(t,9.5+i*2.2,11.0+i*2.2));
+    if(a<=0.002)return;
+    const px=W*it.pos[0], py=H*it.pos[1];
+    const [qx,qy]=curvePt(it.z);
+
+    ctx.save();ctx.globalAlpha=a*fade;
+
+    // 连线
+    ctx.strokeStyle='rgba(88,196,221,0.55)';ctx.lineWidth=1.6;
+    ctx.setLineDash([6,6]);
+    ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(qx,qy);ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 曲线上的点
+    ctx.fillStyle=C.yellow;ctx.shadowColor=C.yellow;ctx.shadowBlur=14;
+    ctx.beginPath();ctx.arc(qx,qy,5.5,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+
+    // 标签
+    text(it.t1,px,py-6,{size:24,weight:700,alpha:a*fade});
+    text(it.t2,px,py+24,{size:17,color:C.muted,alpha:a*fade*0.95});
+  });
+
+  /* 顶部标题 */
+  text('它藏在什么地方',72,96,{size:42,weight:700,align:'left',alpha:fade>0?1:0});
+
+  /* 收尾 */
+  const s1=cl(t,38.5,41.0);
+  if(s1>0){
+    ctx.save();ctx.fillStyle='rgba(10,10,15,'+(1*easeOut(s1)).toFixed(3)+')';
+    ctx.fillRect(0,0,W,H);ctx.restore();
+
+    text('每一次相加，都在削掉一点个性的棱角',W/2,H*0.335,{size:28,color:C.muted,alpha:easeOut(cl(t,38.8,41.0))});
+    text('加到足够多次，就只剩下均值与方差',W/2,H*0.435,{size:28,color:C.muted,alpha:easeOut(cl(t,40.5,42.7))});
+    text('加法，是这个世界最温柔的过滤器',W/2,H*0.575,{size:46,weight:700,alpha:easeOut(cl(t,42.5,45.0)),blur:18});
+    text('—— 中心极限定理',W/2,H*0.695,{size:26,color:C.blue,alpha:easeOut(cl(t,45.5,48.0))});
+  }
+}
+
+function setFrame(n){frame=n;draw();}
+const state={last:0};let playFrame=0;
+function loop(ts){
+  const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;
+  playFrame+=dt*FPS;
+  if(playFrame>TOTAL+60)playFrame=0;
+  setFrame(Math.floor(playFrame));
+  requestAnimationFrame(loop);
+}
+document.getElementById('reset').addEventListener('click',()=>{playFrame=0;setFrame(0);});
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');
+  s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';
+  s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';
+  document.getElementById('controls').style.display='none';
+  document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>

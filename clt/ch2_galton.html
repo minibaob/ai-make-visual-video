@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中心极限定理 · 高尔顿板</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> CH2 / 高尔顿板</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){
+  const s=document.getElementById('stage');const r=s.getBoundingClientRect();
+  W=Math.round(r.width)||960;H=Math.round(r.height)||540;
+  cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30, TOTAL=2430;
+let frame=0;
+const cl=(v,a=0,b=1)=>Math.min(1,Math.max(0,(v-a)/(b-a)));
+const easeOut=t=>1-Math.pow(1-t,3);
+const lerp=(a,b,t)=>a+(b-a)*t;
+const C={bg:'#0A0A0F',blue:'#58C4DD',green:'#83C167',yellow:'#FFD93D',red:'#FF6B6B',text:'#EAEAEA',muted:'#8a8a9a'};
+
+function text(str,x,y,o){
+  o=o||{};
+  const size=o.size||24,color=o.color||C.text,weight=o.weight||500,
+        align=o.align||'center',baseline=o.baseline||'middle',
+        alpha=(o.alpha===undefined?1:o.alpha),blur=o.blur||0;
+  if(alpha<=0.002)return;
+  ctx.save();ctx.globalAlpha=alpha;
+  ctx.font=weight+' '+size+'px "JetBrains Mono","Consolas",monospace';
+  ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline=baseline;
+  if(blur){ctx.shadowColor=color;ctx.shadowBlur=blur;}
+  ctx.fillText(str,x,y);ctx.restore();
+}
+
+/* ---------- 参数 ---------- */
+const LAYERS=12, BALLS=150;
+const T_CARD=5.4;                 // 章节卡结束
+const T_DROP=9.0;                // 开始落球
+const INTERVAL=0.30;              // 每颗球间隔
+const LAYER_T=0.13;               // 每层耗时
+const DROP_IN=0.32;               // 从顶部落到第一层的时间
+const FALL_END=0.22;              // 落进槽的最后一段
+const FALL_T=DROP_IN+LAYERS*LAYER_T+FALL_END;
+
+function rnd(seed){
+  let t=seed+0x6D2B79F5;
+  t=Math.imul(t^t>>>15,t|1);
+  t^=t+Math.imul(t^t>>>7,t|61);
+  return ((t^t>>>14)>>>0)/4294967296;
+}
+const paths=[];
+for(let j=0;j<BALLS;j++){
+  const seq=[];let r=0;
+  for(let k=0;k<LAYERS;k++){
+    const go=rnd(j*97+k*13+7)>0.5?1:0;
+    seq.push(go);r+=go;
+  }
+  paths.push({seq,r});
+}
+// 二项分布 C(12,k)/4096
+const BINOM=[];
+for(let k=0;k<=LAYERS;k++){
+  let c=1;for(let i=0;i<k;i++)c=c*(LAYERS-i)/(i+1);
+  BINOM.push(c/Math.pow(2,LAYERS));
+}
+
+/* ---------- 布局（全部在 draw 内按 W/H 现算） ---------- */
+function layout(){
+  const dx=Math.min(W*0.030,H*0.054);
+  return {
+    cx:W*0.5,
+    yTop:H*0.115,
+    dy:(H*0.575-H*0.115)/LAYERS,
+    dx:dx,
+    baseY:H*0.945,
+    maxBarH:H*0.255
+  };
+}
+
+function draw(){
+  const t=frame/FPS;
+  ctx.clearRect(0,0,W,H);
+
+  if(t<T_CARD){
+    const a=easeOut(cl(t,0.3,1.5))*(1-cl(t,4.4,5.4));
+    text('第 二 章',W/2,H*0.40,{size:26,color:C.blue,alpha:a});
+    text('把它做成一台机器',W/2,H*0.50,{size:56,weight:700,alpha:a,blur:18});
+    text('高尔顿板：每颗球只做一件事——随机左或右',W/2,H*0.60,{size:24,color:C.muted,alpha:easeOut(cl(t,1.6,3.0))*(1-cl(t,4.4,5.4))});
+    return;
+  }
+
+  const L=layout();
+  const {cx,yTop,dy,dx,baseY,maxBarH}=L;
+
+  /* ---- 已经落定的球数 ---- */
+  let landed=0;
+  for(let j=0;j<BALLS;j++){
+    const landT=T_DROP+j*INTERVAL+FALL_T;
+    if(t>=landT)landed=j+1;
+  }
+  const counts=new Array(LAYERS+1).fill(0);
+  for(let j=0;j<landed;j++)counts[paths[j].r]++;
+
+  /* ---- 槽（柱状图） ---- */
+  const expectMax=BALLS*BINOM[LAYERS/2];
+  const appear=cl(t,T_CARD+1.2,T_CARD+2.4);
+  for(let k=0;k<=LAYERS;k++){
+    const x=cx+(k-LAYERS/2)*dx;
+    const hh=maxBarH*Math.min(1,counts[k]/expectMax);
+    const bw=dx*0.74;
+    if(hh>0.5){
+      const g=ctx.createLinearGradient(0,baseY-hh,0,baseY);
+      g.addColorStop(0,'#58C4DD');g.addColorStop(1,'rgba(88,196,221,0.22)');
+      ctx.save();ctx.globalAlpha=appear;ctx.fillStyle=g;
+      ctx.beginPath();
+      if(ctx.roundRect)ctx.roundRect(x-bw/2,baseY-hh,bw,hh,[2,2,0,0]);
+      else ctx.rect(x-bw/2,baseY-hh,bw,hh);
+      ctx.fill();ctx.restore();
+    }
+    // 槽底刻度
+    ctx.save();ctx.globalAlpha=0.25*appear;
+    ctx.strokeStyle='#8a8a9a';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,baseY);ctx.lineTo(x,baseY+7);ctx.stroke();ctx.restore();
+  }
+
+  /* ---- 二项分布理论包络 ---- */
+  const envA=cl(t,T_DROP-1.0,T_DROP+1.0);
+  if(envA>0){
+    ctx.save();ctx.globalAlpha=envA;
+    ctx.strokeStyle='#FFD93D';ctx.lineWidth=2.6;ctx.setLineDash([10,8]);
+    ctx.shadowColor='#FFD93D';ctx.shadowBlur=12;
+    ctx.beginPath();
+    for(let k=0;k<=LAYERS;k++){
+      const x=cx+(k-LAYERS/2)*dx;
+      const y=baseY-maxBarH*Math.min(1,BINOM[k]/BINOM[LAYERS/2]);
+      k===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke();ctx.restore();
+  }
+
+  /* ---- 钉板 ---- */
+  const pegA=cl(t,T_CARD,T_CARD+2.5);
+  if(pegA>0){
+    ctx.save();
+    for(let k=0;k<=LAYERS;k++){
+      const kA=easeOut(cl(t,T_CARD+k*0.12,T_CARD+k*0.12+0.4));
+      if(kA<=0)continue;
+      for(let i=0;i<=k;i++){
+        const x=cx+(i-k/2)*dx;
+        const y=yTop+k*dy;
+        ctx.globalAlpha=kA*0.75*pegA;
+        ctx.fillStyle='#C8C8DC';
+        ctx.beginPath();ctx.arc(x,y,Math.max(2.2,W*0.0022),0,Math.PI*2);ctx.fill();
+        ctx.globalAlpha=kA*0.13*pegA;
+        ctx.beginPath();ctx.arc(x,y,Math.max(6,W*0.0072),0,Math.PI*2);ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  /* ---- 下落的球 ---- */
+  for(let j=0;j<BALLS;j++){
+    const relT=T_DROP+j*INTERVAL;
+    const e=t-relT;
+    if(e<0||e>FALL_T)continue;
+    const pth=paths[j];
+    let bx,by;
+    if(e<DROP_IN){
+      const q=e/DROP_IN;
+      bx=cx;by=lerp(yTop-dy*2.6,yTop,q*q);
+    }else{
+      const p=(e-DROP_IN)/LAYER_T;
+      if(p>=LAYERS){
+        const q=Math.min(1,(e-(DROP_IN+LAYERS*LAYER_T))/FALL_END);
+        bx=cx+(2*pth.r-LAYERS)*dx/2;
+        const topY=baseY-maxBarH*Math.min(1,(counts[pth.r]+1)/expectMax);
+        by=lerp(yTop+LAYERS*dy,topY,q*q);
+      }else{
+        let k=Math.floor(p);
+        if(k>=LAYERS)k=LAYERS-1;
+        const frac=p-k;
+        let rBefore=0;for(let i=0;i<k;i++)rBefore+=pth.seq[i];
+        const x0=cx+(2*rBefore-k)*dx/2;
+        const rAfter=rBefore+pth.seq[k];
+        const x1=cx+(2*rAfter-(k+1))*dx/2;
+        const kf=frac*frac*(3-2*frac);
+        bx=lerp(x0,x1,kf);
+        by=yTop+(k+kf)*dy;
+      }
+    }
+    const rr=Math.max(3.0,W*0.0032);
+    ctx.save();
+    ctx.fillStyle='#FFD93D';ctx.shadowColor='#FFD93D';ctx.shadowBlur=12;
+    ctx.beginPath();ctx.arc(bx,by,rr,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+
+  /* ---- 文字 ---- */
+  text('高尔顿板',72,96,{size:42,weight:700,align:'left'});
+  let cap='每颗球碰到钉子，随机向左或向右';
+  if(t>T_DROP+2)cap='几千次「左或右」，各自独立';
+  if(landed>=BALLS)cap='球堆出来的，正好是钟形';
+  text(cap,72,150,{size:28,align:'left'});
+
+  if(t>=T_DROP-0.5){
+    text('已落 '+landed+' / '+BALLS,W-72,H*0.885,{size:24,color:C.muted,align:'right'});
+  }
+  const labelA=cl(t,T_DROP+1,T_DROP+2.5);
+  text('每层的概率：C(12,k) / 4096',W-72,H*0.17,{size:22,color:C.yellow,align:'right',alpha:labelA});
+
+  /* ---- 结语 ---- */
+  const s1=cl(t,68.0,70.5);
+  if(s1>0){
+    ctx.save();ctx.fillStyle='rgba(10,10,15,'+(1*easeOut(s1)).toFixed(3)+')';
+    ctx.fillRect(0,0,W,H);ctx.restore();
+    text('每一次都是纯粹的运气',W/2,H*0.40,{size:34,color:C.muted,alpha:easeOut(cl(t,68.2,70.0))});
+    text('合起来，却是一条完美的曲线',W/2,H*0.50,{size:48,weight:700,alpha:easeOut(s1),blur:18});
+    text('这正是中心极限定理在物理世界的样子',W/2,H*0.62,{size:24,color:C.blue,alpha:easeOut(cl(t,71.0,73.5))});
+  }
+}
+
+function setFrame(n){frame=n;draw();}
+const state={last:0};let playFrame=0;
+function loop(ts){
+  const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;
+  playFrame+=dt*FPS;
+  if(playFrame>TOTAL+60)playFrame=0;
+  setFrame(Math.floor(playFrame));
+  requestAnimationFrame(loop);
+}
+document.getElementById('reset').addEventListener('click',()=>{playFrame=0;setFrame(0);});
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');
+  s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';
+  s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';
+  document.getElementById('controls').style.display='none';
+  document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>本福特定律 · 封面</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--yellow:#FFD93D;--green:#83C167;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--bg);overflow:hidden;font-family:"JetBrains Mono","Consolas",monospace;}
+  #wrap{position:relative;width:1080px;height:1920px;overflow:hidden;
+    background:radial-gradient(80% 52% at 50% 42%, #191a34 0%, #0A0A0F 60%);}
+  .tag{position:absolute;left:0;right:0;top:296px;text-align:center;font-size:26px;letter-spacing:9px;color:var(--blue);}
+  h1{position:absolute;left:0;right:0;top:372px;text-align:center;font-size:86px;font-weight:700;color:#fff;}
+  h1 em{font-style:normal;color:var(--yellow);}
+  .sub{position:absolute;left:0;right:0;top:488px;text-align:center;font-size:34px;color:#B8B8C8;}
+  #art{position:absolute;left:0;top:600px;width:1080px;height:760px;}
+  .pill{position:absolute;left:50%;transform:translateX(-50%);top:1460px;
+    display:flex;align-items:center;gap:16px;height:84px;padding:0 44px;
+    border:3px solid var(--yellow);border-radius:48px;font-size:30px;color:var(--yellow);letter-spacing:2px;}
+  .pill i{width:13px;height:13px;border-radius:50%;background:var(--yellow);}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="tag">本 福 特 定 律</div>
+  <h1><em>1</em> 占了 <em>30%</em></h1>
+  <div class="sub">你以为 1 到 9 平分概率</div>
+  <canvas id="art" width="1080" height="760"></canvas>
+  <div class="pill"><i></i>22 秒，看懂数字的破绽</div>
+</div>
+<script>
+const cv=document.getElementById('art');
+const ctx=cv.getContext('2d');
+const W=1080,H=760;
+const THEORY=[0,.30103,.17609,.12494,.09691,.07918,.06695,.05799,.05115,.04576];
+const BASE=700, HMAX=620, PMAX=0.30103;
+const SLOT=106.7, X0=60, BW=66;
+const barX=i=>X0+i*SLOT+SLOT/2;
+
+function roundTop(x,y,w,h,r){
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x,y,w,h,[r,r,0,0]);
+  else ctx.rect(x,y,w,h);
+}
+
+ctx.strokeStyle='rgba(160,160,200,0.22)'; ctx.lineWidth=2;
+ctx.beginPath(); ctx.moveTo(40,BASE); ctx.lineTo(W-40,BASE); ctx.stroke();
+
+for(let k=1;k<=9;k++){
+  const i=k-1, p=THEORY[k], hh=p/PMAX*HMAX, x=barX(i)-BW/2;
+  const isOne=(k===1);
+  const g=ctx.createLinearGradient(0,BASE-hh,0,BASE);
+  if(isOne){ g.addColorStop(0,'#FFD93D'); g.addColorStop(1,'rgba(255,217,61,0.2)'); }
+  else { g.addColorStop(0,'#58C4DD'); g.addColorStop(1,'rgba(88,196,221,0.15)'); }
+  ctx.save();
+  ctx.fillStyle=g;
+  if(isOne){ ctx.shadowColor='rgba(255,217,61,0.6)'; ctx.shadowBlur=30; }
+  roundTop(x,BASE-hh,BW,hh,8); ctx.fill();
+  ctx.restore();
+
+  ctx.font=(isOne?'700 34px':'700 24px')+' "JetBrains Mono",monospace';
+  ctx.fillStyle=isOne?'#FFD93D':'#9FB6C8';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText((p*100).toFixed(1)+'%', barX(i), BASE-hh-(isOne?34:26));
+
+  ctx.font='700 44px "JetBrains Mono",monospace';
+  ctx.fillStyle=isOne?'#FFD93D':'#C8C8D8';
+  ctx.fillText(String(k), barX(i), BASE+42);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>π 藏在弹珠里 · 竖屏</title>
+<style>
+  :root{--bg:#0A0A0F;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;align-items:center;justify-content:center;}
+  #stage{width:540px;aspect-ratio:9/16;background:var(--bg);overflow:hidden;}
+  canvas{display:block;width:100%;height:100%;}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="cv"></canvas></div>
+<script>
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+const DPR=2;
+const W=1080, H=1920;
+function resize(){ cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); }
+
+const FPS=30, TOTAL=600;
+let frame=0;
+
+const C={blue:'#58C4DD',yellow:'#FFD93D',white:'#FFFFFF',muted:'#8a8a9a'};
+const cl=(v,a=0,b=1)=>Math.min(1,Math.max(0,(v-a)/(b-a)));
+const easeOut=t=>1-Math.pow(1-t,3);
+
+/* ---------- 一维弹性碰撞：事件驱动，无积分误差 ---------- */
+function simulate(Mratio){
+  const M=Mratio, m=1, R1=1.0, R2=0.55;
+  let x1=7.0, x2=4.6, v1=-3.0, v2=0, t=0, n=0;
+  const ev=[{t:0,x1,x2,v1,v2,type:'start'}];
+  while(n<20000){
+    const gap=(x1-x2)-(R1+R2);
+    const dv=v1-v2;
+    const tBall = dv<0 ? Math.max(0,-gap/dv) : Infinity;
+    const tWall = v2<0 ? Math.max(0,(x2-R2)/(-v2)) : Infinity;
+    const dt=Math.min(tBall,tWall);
+    if(!isFinite(dt)) break;
+    x1+=v1*dt; x2+=v2*dt; t+=dt;
+    let type;
+    if(tBall<=tWall){
+      const nv1=((M-m)*v1+2*m*v2)/(M+m);
+      const nv2=((m-M)*v2+2*M*v1)/(M+m);
+      v1=nv1; v2=nv2; type='ball';
+    } else { v2=-v2; type='wall'; }
+    n++;
+    ev.push({t,x1,x2,v1,v2,type});
+  }
+  return ev;
+}
+
+const S=simulate(100);
+const HITS=S.length-1;
+const T_SPLIT=S[HITS-1].t;
+const T_PHYS_END=S[HITS].t+0.35;
+
+/* 分段慢放：前段细致，末段追击加速，避免球飞出后干等 */
+const SLOW1=4.2, SLOW2=2.4;
+const A_SPLIT=T_SPLIT*SLOW1;
+const T_EXIT=A_SPLIT+(T_PHYS_END-T_SPLIT)*SLOW2;
+
+function physOf(tA){ return tA<=A_SPLIT ? tA/SLOW1 : T_SPLIT+(tA-A_SPLIT)/SLOW2; }
+function animOf(tP){ return tP<=T_SPLIT ? tP*SLOW1 : A_SPLIT+(tP-T_SPLIT)*SLOW2; }
+
+/* ---------- 屏幕映射 ---------- */
+const SX0=140, SX1=1012, VIEW=7.8;
+const CY=980;
+const WALL_TOP=690, WALL_BOT=1210;
+
+/* ---------- 绘制工具 ---------- */
+function ball(cx,cy,R,cIn,cMid,cOut,flash){
+  ctx.save();
+  const g=ctx.createRadialGradient(cx-R*0.32,cy-R*0.36,R*0.08,cx,cy,R*1.02);
+  g.addColorStop(0,cIn); g.addColorStop(0.52,cMid); g.addColorStop(1,cOut);
+  ctx.fillStyle=g;
+  ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+  if(flash>0.01){
+    ctx.globalAlpha=flash*0.85; ctx.fillStyle='#FFFFFF';
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  ctx.lineWidth=3;
+  ctx.strokeStyle='rgba(255,255,255,'+(0.30+flash*0.45)+')';
+  ctx.beginPath(); ctx.arc(cx,cy,R-1.5,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
+function trail(cx,cy,R,v,color){
+  const sp=Math.abs(v);
+  if(sp<0.4) return;
+  const len=Math.min(sp*6.5, 130);
+  const dir=-Math.sign(v);
+  ctx.save();
+  const g=ctx.createLinearGradient(cx,cy,cx+dir*len,cy);
+  g.addColorStop(0,color); g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.strokeStyle=g; ctx.lineWidth=R*0.28; ctx.lineCap='round'; ctx.globalAlpha=0.45;
+  ctx.beginPath(); ctx.moveTo(cx+dir*R*0.5,cy); ctx.lineTo(cx+dir*(R*0.5+len),cy); ctx.stroke();
+  ctx.restore();
+}
+
+function txt(s,x,y,o){
+  o=o||{};
+  const size=o.size||30, color=o.color||C.white, weight=o.weight||500,
+        align=o.align||'center', alpha=(o.alpha===undefined?1:o.alpha), blur=o.blur||0;
+  if(alpha<=0.003) return;
+  ctx.save(); ctx.globalAlpha=alpha;
+  ctx.font=weight+' '+size+'px "JetBrains Mono","Consolas",monospace';
+  ctx.fillStyle=color; ctx.textAlign=align; ctx.textBaseline='middle';
+  if(blur){ctx.shadowColor=color; ctx.shadowBlur=blur;}
+  ctx.fillText(s,x,y); ctx.restore();
+}
+
+function bigNum(str,cx,cy,size,gap,color,blur){
+  ctx.save();
+  ctx.font='700 '+size+'px "JetBrains Mono","Consolas",monospace';
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  const cw=ctx.measureText('0').width;
+  const total=str.length*cw+(str.length-1)*gap;
+  let x=cx-total/2;
+  ctx.fillStyle=color;
+  if(blur){ctx.shadowColor=color; ctx.shadowBlur=blur;}
+  for(const ch of str){ ctx.fillText(ch,x,cy); x+=cw+gap; }
+  ctx.restore();
+}
+
+/* ---------- 主绘制 ---------- */
+function draw(){
+  const tA=frame/FPS;
+  const tP=Math.min(physOf(tA), T_PHYS_END);
+
+  let i=0;
+  while(i<S.length-1 && S[i+1].t<=tP) i++;
+  const e=S[i];
+  const dt=tP-e.t;
+  const x1=e.x1+e.v1*dt, x2=e.x2+e.v2*dt;
+  const hits=i;
+
+  const sinceHit=hits>0 ? tA-animOf(S[i].t) : 99;
+  const flash = hits>0 ? Math.max(0,1-sinceHit/0.26) : 0;
+  const ringT = sinceHit;
+
+  /* 镜头跟随：球跑出右边界时视口右移 */
+  const need=Math.max(x1+1.0, x2+0.55)+0.35;
+  const vmax=Math.max(VIEW, need);
+  const vmin=vmax-VIEW;
+  const U=(SX1-SX0)/VIEW;
+  const PX=x=>SX0+(x-vmin)*U;
+  const RP1=1.0*U, RP2=0.55*U;
+
+  /* 背景 */
+  const bg=ctx.createRadialGradient(W*0.5,900,100,W*0.5,1200,1300);
+  bg.addColorStop(0,'#151529'); bg.addColorStop(1,'#0A0A0F');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  /* 地线 */
+  ctx.save();
+  ctx.strokeStyle='rgba(150,150,190,0.14)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,CY+RP1+38); ctx.lineTo(W,CY+RP1+38); ctx.stroke();
+  ctx.restore();
+
+  /* 墙（随镜头移出） */
+  const wallX=PX(0);
+  if(wallX>-60){
+    ctx.save();
+    ctx.strokeStyle='rgba(220,220,240,0.55)'; ctx.lineWidth=8; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(wallX,WALL_TOP); ctx.lineTo(wallX,WALL_BOT); ctx.stroke();
+    for(let y=WALL_TOP+16; y<WALL_BOT; y+=34){
+      ctx.strokeStyle='rgba(180,180,210,0.26)'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(wallX-26,y+16); ctx.lineTo(wallX,y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  const cx1=PX(x1), cx2=PX(x2);
+
+  trail(cx1,CY,RP1,e.v1,'rgba(88,196,221,0.55)');
+  trail(cx2,CY,RP2,e.v2,'rgba(255,217,61,0.6)');
+
+  ball(cx1,CY,RP1,'#9FE7F8','#58C4DD','#2A6E80',flash*0.9);
+  ball(cx2,CY,RP2,'#FFF0A8','#FFD93D','#8A6A0F',flash*0.9);
+
+  /* 碰撞圆环 */
+  if(ringT<0.30){
+    const p=ringT/0.30;
+    const ev0=S[i];
+    const mx = (ev0 && ev0.type==='wall') ? PX(ev0.x2-0.55*0.5) : (PX(ev0.x1)+PX(ev0.x2))/2;
+    ctx.save();
+    ctx.globalAlpha=(1-p)*0.55;
+    ctx.strokeStyle='#FFFFFF'; ctx.lineWidth=3.5*(1-p)+1;
+    ctx.beginPath(); ctx.arc(mx,CY,30+p*105,0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  txt('100x',cx1,CY,{size:Math.max(24,RP1*0.32),weight:700,color:'#0E2A33'});
+  txt('1x',cx2,CY,{size:Math.max(18,RP2*0.34),weight:700,color:'#4A3A00'});
+
+  /* 顶部压暗 */
+  const scrim=ctx.createLinearGradient(0,0,0,660);
+  scrim.addColorStop(0,'rgba(10,10,15,0.96)');
+  scrim.addColorStop(0.6,'rgba(10,10,15,0.70)');
+  scrim.addColorStop(1,'rgba(10,10,15,0)');
+  ctx.fillStyle=scrim; ctx.fillRect(0,0,W,660);
+
+  /* 开场钩子：第 0 帧即完整呈现，直接可作封面 */
+  if(tA<3.0){
+    const a=1-cl(tA,2.2,2.9);
+    txt('台 球 实 验  ·  π',W/2,268,{size:24,color:C.blue,alpha:a*0.95});
+    txt('撞到第 31 次',W/2,356,{size:64,weight:700,alpha:a});
+    txt('你会看到 π',W/2,448,{size:64,weight:700,color:C.yellow,alpha:a});
+  }
+
+  /* 常驻 HUD */
+  const hudA=cl(tA,2.3,3.0)*(1-cl(tA,T_EXIT-0.6,T_EXIT-0.1));
+  if(hudA>0){
+    txt('质量比 100 : 1',W/2,300,{size:30,color:C.blue,alpha:hudA*0.95});
+    txt('每撞一次，就计数 +1',W/2,350,{size:26,color:C.muted,alpha:hudA*0.8});
+  }
+
+  /* 计数器 */
+  if(hudA>0){
+    const bounce=1+0.28*Math.exp(-sinceHit*7.5);
+    ctx.save();
+    ctx.translate(W/2,1385); ctx.scale(bounce,bounce);
+    ctx.globalAlpha=hudA;
+    bigNum(String(hits),0,0,148,16, hits>=HITS?C.yellow:C.white, hits>=HITS?40:0);
+    ctx.restore();
+    txt('碰 撞 次 数',W/2,1250,{size:26,color:C.muted,alpha:hudA*0.9});
+  }
+
+  /* 收尾 */
+  if(tA>T_EXIT-0.3){
+    const o=cl(tA,T_EXIT-0.3,T_EXIT+0.8);
+    ctx.save();
+    ctx.fillStyle='rgba(10,10,15,'+easeOut(o).toFixed(3)+')';
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+
+    const pi='3.14159265358979';
+    const nShow=Math.min(pi.length, Math.floor((tA-(T_EXIT+0.2))*13));
+    if(nShow>0){
+      txt('π =',W/2,760,{size:52,color:C.muted,alpha:cl(tA,T_EXIT+0.1,T_EXIT+0.5)});
+      ctx.save();
+      ctx.globalAlpha=cl(tA,T_EXIT+0.1,T_EXIT+0.5);
+      ctx.font='700 78px "JetBrains Mono","Consolas",monospace';
+      ctx.fillStyle=C.yellow; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.shadowColor=C.yellow; ctx.shadowBlur=46;
+      ctx.fillText(pi.slice(0,nShow),W/2,860);
+      ctx.restore();
+    }
+
+    const s1=cl(tA,T_EXIT+0.85,T_EXIT+1.6);
+    txt('质量比 100 倍',W/2,1060,{size:32,color:'#C8C8D8',alpha:easeOut(s1)});
+    txt('→ 碰撞 31 次',W/2,1122,{size:38,weight:700,alpha:easeOut(s1)});
+
+    const s2=cl(tA,T_EXIT+1.6,T_EXIT+2.35);
+    txt('质量比 10000 倍',W/2,1236,{size:32,color:'#C8C8D8',alpha:easeOut(s2)});
+    txt('→ 碰撞 314 次',W/2,1298,{size:38,weight:700,color:C.yellow,alpha:easeOut(s2)});
+
+    txt('碰撞次数 = π 的位数',W/2,1420,{size:32,weight:700,color:C.blue,alpha:easeOut(cl(tA,T_EXIT+2.35,T_EXIT+3.0))});
+    txt('关注 · 每天一个可视化概念',W/2,1560,{size:25,color:C.muted,alpha:easeOut(cl(tA,T_EXIT+2.9,T_EXIT+3.5))});
+  }
+}
+
+resize();
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const stage=document.getElementById('stage');
+  stage.style.width=W+'px'; stage.style.height=H+'px'; stage.style.aspectRatio='auto';
+  document.body.style.margin='0';
+  resize();
+  window.__renderFrame=(n)=>{ frame=n; draw(); };
+  window.__renderFrame(0);
+}else{
+  let last=0;
+  const loop=(ts)=>{
+    if(!last) last=ts;
+    frame=(frame+(ts-last)/1000*FPS)%TOTAL;
+    last=ts; draw();
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

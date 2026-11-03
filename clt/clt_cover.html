@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>中心极限定理 · 封面</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{background:var(--bg);overflow:hidden;font-family:"JetBrains Mono","Consolas",monospace;color:var(--text);}
+  #wrap{position:relative;width:1920px;height:1080px;overflow:hidden;
+    background:radial-gradient(90% 80% at 72% 38%, #16203a 0%, #0A0A0F 62%);}
+  #wrap.v{width:1080px;height:1920px;background:radial-gradient(90% 60% at 50% 62%, #16203a 0%, #0A0A0F 62%);}
+  .grid{position:absolute;inset:0;opacity:.35;
+    background-image:linear-gradient(rgba(140,140,180,.07) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(140,140,180,.07) 1px,transparent 1px);
+    background-size:80px 80px;}
+  .tag{position:absolute;left:96px;top:84px;font-size:26px;letter-spacing:4px;color:var(--muted);}
+  .tag b{color:var(--blue);font-weight:500;}
+  h1{position:absolute;left:96px;top:320px;font-size:104px;font-weight:700;letter-spacing:2px;line-height:1.24;color:#fff;}
+  h1 em{font-style:normal;color:var(--yellow);}
+  .sub{position:absolute;left:100px;top:548px;font-size:40px;color:#c9c9d8;letter-spacing:1px;}
+  .formula{position:absolute;left:100px;top:640px;font-size:32px;color:var(--green);letter-spacing:1px;}
+  .pill{position:absolute;left:96px;bottom:168px;display:inline-flex;align-items:center;gap:14px;
+    height:76px;padding:0 38px;border:3px solid var(--yellow);border-radius:44px;
+    font-size:30px;color:var(--yellow);letter-spacing:2px;}
+  .pill i{width:12px;height:12px;border-radius:50%;background:var(--yellow);display:inline-block;}
+  #art{position:absolute;right:0;top:0;}
+  /* 竖版 */
+  .v .tag{left:80px;top:120px;}
+  .v h1{left:80px;top:392px;font-size:96px;}
+  .v .sub{left:84px;top:576px;font-size:38px;}
+  .v .formula{left:84px;top:652px;font-size:30px;}
+  .v .pill{left:80px;bottom:150px;}
+  .v #art{right:auto;left:0;top:760px;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="grid"></div>
+  <div class="tag"><b>■</b> 每天一个可视化概念 · 特别篇</div>
+  <h1>中心<em>极限</em>定理</h1>
+  <div class="sub">为什么正态分布无处不在</div>
+  <div class="formula">随机相加　→　正态分布</div>
+  <canvas id="art"></canvas>
+  <div class="pill"><i></i>7 分钟，从一颗骰子讲到 AI</div>
+</div>
+<script>
+const wrap=document.getElementById('wrap');
+const cv=document.getElementById('art');const ctx=cv.getContext('2d');
+const vertical=new URLSearchParams(location.search).get('size')==='916';
+if(vertical){wrap.classList.add('v');cv.width=1080;cv.height=800;cv.style.width='1080px';cv.style.height='800px';}
+else{cv.width=1080;cv.height=1080;cv.style.width='1080px';cv.style.height='1080px';}
+
+const C={blue:'#58C4DD',yellow:'#FFD93D',red:'#FF6B6B',green:'#83C167',muted:'#8a8a9a'};
+
+function bell(cx,baseY,hw,hh,color,lw,alpha){
+  ctx.save();ctx.globalAlpha=alpha;
+  const g=ctx.createLinearGradient(0,baseY-hh,0,baseY);
+  g.addColorStop(0,color);g.addColorStop(1,'rgba(88,196,221,0.03)');
+  ctx.beginPath();
+  for(let i=0;i<=260;i++){
+    const u=-1.15+2.3*i/260;
+    const x=cx+u*hw, y=baseY-hh*Math.exp(-u*u*7.5);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.lineTo(cx+hw*1.15,baseY);ctx.lineTo(cx-hw*1.15,baseY);ctx.closePath();
+  ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();
+  for(let i=0;i<=260;i++){
+    const u=-1.15+2.3*i/260;
+    const x=cx+u*hw, y=baseY-hh*Math.exp(-u*u*7.5);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.lineJoin='round';
+  ctx.shadowColor=color;ctx.shadowBlur=26;
+  ctx.stroke();ctx.restore();
+}
+function bars(cx,baseY,w,h,hs,color,alpha){
+  const n=hs.length,slot=w/n,bw=slot*0.6;
+  ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=color;
+  for(let i=0;i<n;i++){
+    const hh=h*hs[i];
+    ctx.beginPath();
+    if(ctx.roundRect)ctx.roundRect(cx-w/2+slot*i+(slot-bw)/2,baseY-hh,bw,hh,[3,3,0,0]);
+    else ctx.rect(cx-w/2+slot*i+(slot-bw)/2,baseY-hh,bw,hh);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+if(vertical){
+  // 竖版：上方三个小分布，下方大钟形
+  const xs=[200,540,880];
+  const kinds=[[.62,.62,.62,.62,.62,.62],[1,.6,.35,.2,.11,.06],[.9,.3,.15,.15,.3,.9]];
+  const cols=[C.blue,C.red,C.green];
+  xs.forEach((x,i)=>bars(x,175,150,100,kinds[i],cols[i],0.85));
+  bell(540,725,435,395,C.blue,9,1);
+}else{
+  // 横版：三个小分布 → 箭头 → 大钟形
+  const xs=[160,320,480];
+  const kinds=[[.62,.62,.62,.62,.62,.62],[1,.6,.35,.2,.11,.06],[.9,.3,.15,.15,.3,.9]];
+  const cols=[C.blue,C.red,C.green];
+  xs.forEach((x,i)=>bars(x,690,120,110,kinds[i],cols[i],0.85));
+  // 箭头
+  ctx.save();ctx.globalAlpha=0.55;ctx.strokeStyle=C.muted;ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(556,640);ctx.lineTo(612,640);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(612,640);ctx.lineTo(594,628);ctx.lineTo(594,652);ctx.closePath();
+  ctx.fillStyle=C.muted;ctx.fill();ctx.restore();
+  bell(812,780,235,290,C.blue,9,1);
+}
+</script>
+</body>
+</html>

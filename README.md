@@ -17,6 +17,15 @@
 **长视频（10 分钟）**
 - 《微积分到底在解决什么？》——从切线到积分的完整直觉，7 章结构
 
+**竖屏短视频（1080×1920，抖音向，2026-11 起）**
+
+| 文件 | 选题 | 时长 |
+|---|---|---|
+| `topic1_lie_v.mp4` | 微分的谎言（竖屏版） | 17s |
+| `topic8_pi_v.mp4` | π 藏在弹珠碰撞里 | 20s |
+| `topic9_benford_v.mp4` | 本福特定律：1 占了 30% | 22s |
+| `topic9_benford_v_music.mp4` | 同上，带配乐 | 22s |
+
 ## 快速开始（开箱即用）
 
 ### 方式一：可视化配置台（推荐，无需记命令）
@@ -102,13 +111,20 @@ pip install -i https://mirrors.aliyun.com/pypi/simple/ numpy edge-tts imageio-ff
 | `config.json` | 集中配置（选题列表、分辨率、封面尺寸等） |
 | `lib/ffmpeg.js` | ffmpeg 路径自动探测 |
 | `lib/prompt.js` | 新选题提示词生成器 |
-| `export_capture.js` | 逐帧截图（`node export_capture.js <html> <帧数> <输出目录>`） |
+| `export_capture.js` | 逐帧截图（写死 1920×1080，横屏用） |
+| `tools/capture_any.js` | 逐帧截图（可指定宽高，竖屏用这个） |
+| `tools/preview_v2.js` | 竖屏抽帧预览（1080×1920） |
 | `build_video.py` | ffmpeg 合成帧序列 + 混入配乐 |
 | `gen_music.py` | 代码生成多情景配乐（悬疑/逼近/生长/圆融） |
+| `gen_music_benford.py` | 本福特专用配乐（80 BPM lo-fi，段落对齐时间轴） |
 | `mix_voice.py` / `voice_only.py` | 混入/剥离旁白 |
 | `final_mix.py` | 终版合成（画面+配乐+旁白） |
 | `cover_polish.html` | 参数化封面生成器（4:3 横版 + 9:16 竖版） |
 | `render_43_covers.js` | 批量渲染封面 |
+| `cover_pi_v.html` / `cover_benford_v.html` | 竖版封面（1080×1920） |
+| `cover_pi_h.html` / `cover_benford_h.html` | 横版封面（1920×1080） |
+| `tools/render_pi_cover.js` / `render_benford_cover.js` | 渲染竖版封面 |
+| `tools/render_h_covers.js` | 批量渲染横版封面 |
 
 ## 动画文件命名约定
 

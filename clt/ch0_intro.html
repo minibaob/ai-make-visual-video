@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中心极限定理 · 引入</title>
+<style>
+  :root{--bg:#0A0A0F;--blue:#58C4DD;--green:#83C167;--yellow:#FFD93D;--red:#FF6B6B;--text:#EAEAEA;--muted:#8a8a9a;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"JetBrains Mono","SF Mono","Consolas",monospace;color:var(--text);}
+  #stage{width:960px;max-width:96vw;aspect-ratio:16/9;position:relative;background:radial-gradient(120% 120% at 50% 0%, #14142a 0%, var(--bg) 60%);border:1px solid #23233a;border-radius:14px;overflow:hidden;box-shadow:0 0 80px rgba(88,196,221,0.10);}
+  canvas{display:block;width:100%;height:100%;}
+  .tag{position:absolute;top:14px;left:16px;font-size:11px;letter-spacing:2px;color:var(--muted);}
+  .tag em{color:var(--blue);font-style:normal;}
+  #controls{margin-top:18px;display:flex;gap:12px;align-items:center;font-size:12px;color:var(--muted);}
+  button{font-family:inherit;font-size:12px;letter-spacing:1px;background:#1a1a28;color:var(--text);border:1px solid #2c2c44;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.2s;}
+  button:hover{background:#23233a;border-color:var(--blue);}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="tag"><em>■</em> CH0 / 引入</div>
+    <canvas id="cv"></canvas>
+  </div>
+  <div id="controls"><button id="reset">↺ 重播</button></div>
+
+<script>
+const cv=document.getElementById('cv');const ctx=cv.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);let W=960,H=540;
+function resize(){
+  const s=document.getElementById('stage');const r=s.getBoundingClientRect();
+  W=Math.round(r.width)||960;H=Math.round(r.height)||540;
+  cv.width=W*DPR;cv.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize',resize);resize();
+
+const FPS=30, TOTAL=1560;
+let frame=0;
+
+const cl=(v,a=0,b=1)=>Math.min(1,Math.max(0,(v-a)/(b-a)));
+const easeOut=t=>1-Math.pow(1-t,3);
+const easeIO=t=>t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const C={bg:'#0A0A0F',blue:'#58C4DD',green:'#83C167',yellow:'#FFD93D',red:'#FF6B6B',text:'#EAEAEA',muted:'#8a8a9a'};
+
+function bellPath(cx,baseY,hw,hh){
+  ctx.beginPath();
+  for(let i=0;i<=240;i++){
+    const u=-1.15+2.3*i/240;
+    const x=cx+u*hw;
+    const y=baseY-hh*Math.exp(-u*u*7.5);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+}
+function bellStroke(cx,baseY,hw,hh,color,alpha,lw){
+  if(alpha<=0.001||hh<=0.5)return;
+  ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=lw;
+  ctx.lineJoin='round';ctx.lineCap='round';
+  ctx.shadowColor=color;ctx.shadowBlur=16;
+  bellPath(cx,baseY,hw,hh);ctx.stroke();ctx.restore();
+}
+function bellFill(cx,baseY,hw,hh,color,alpha){
+  if(alpha<=0.001||hh<=0.5)return;
+  ctx.save();ctx.globalAlpha=alpha;
+  const g=ctx.createLinearGradient(0,baseY-hh,0,baseY);
+  g.addColorStop(0,color);g.addColorStop(1,'rgba(88,196,221,0.02)');
+  ctx.fillStyle=g;
+  bellPath(cx,baseY,hw,hh);
+  ctx.lineTo(cx+hw*1.15,baseY);ctx.lineTo(cx-hw*1.15,baseY);ctx.closePath();
+  ctx.fill();ctx.restore();
+}
+function bars(cx,baseY,w,h,heights,color,alpha,radius=3){
+  const n=heights.length, slot=w/n, bw=slot*0.62;
+  ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=color;
+  for(let i=0;i<n;i++){
+    const hh=h*heights[i];
+    if(hh<0.6)continue;
+    const x=cx-w/2+slot*i+(slot-bw)/2;
+    ctx.beginPath();
+    if(ctx.roundRect)ctx.roundRect(x,baseY-hh,bw,hh,[radius,radius,0,0]);
+    else ctx.rect(x,baseY-hh,bw,hh);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+function text(str,x,y,o){
+  o=o||{};
+  const size=o.size||24,color=o.color||C.text,weight=o.weight||500,
+        align=o.align||'center',baseline=o.baseline||'middle',
+        alpha=(o.alpha===undefined?1:o.alpha),blur=o.blur||0;
+  if(alpha<=0.002)return;
+  ctx.save();ctx.globalAlpha=alpha;
+  ctx.font=weight+' '+size+'px "JetBrains Mono","Consolas",monospace';
+  ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline=baseline;
+  if(blur){ctx.shadowColor=color;ctx.shadowBlur=blur;}
+  ctx.fillText(str,x,y);ctx.restore();
+}
+
+const cards=[
+  {name:'掷骰子',   sub:'均匀分布',   kind:'uniform',  color:C.blue},
+  {name:'等一辆车', sub:'指数分布',   kind:'exp',      color:C.red},
+  {name:'两群人',   sub:'双峰分布',   kind:'bimodal',  color:C.green},
+  {name:'工资收入', sub:'右偏分布',   kind:'skew',     color:C.yellow},
+];
+const heightsFor=k=>({
+  uniform:[.62,.62,.62,.62,.62,.62],
+  exp:[1,.60,.36,.22,.13,.08],
+  bimodal:[.85,.34,.16,.16,.34,.85],
+  skew:[.32,.58,.95,.70,.42,.24]
+})[k];
+
+function draw(){
+  const t=frame/FPS;
+  ctx.clearRect(0,0,W,H);
+
+  /* 阶段 1：标题 0 - 7s */
+  if(t<7.2){
+    const fi=cl(t,0.25,1.5), fo=1-cl(t,5.9,7.2);
+    const a=easeOut(fi)*fo;
+    text('中心极限定理',W/2,H*0.38,{size:64,weight:700,alpha:a,blur:20});
+    text('Central Limit Theorem',W/2,H*0.38+58,{size:22,color:C.muted,alpha:easeOut(cl(t,0.8,1.9))*fo});
+    text('为什么正态分布无处不在',W/2,H*0.38+126,{size:34,color:C.yellow,alpha:easeOut(cl(t,1.6,2.8))*fo});
+    const lw=easeOut(cl(t,2.2,3.4))*fo;
+    ctx.save();ctx.globalAlpha=lw*0.45;ctx.strokeStyle=C.blue;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(W/2-190*lw,H*0.38+172);ctx.lineTo(W/2+190*lw,H*0.38+172);ctx.stroke();ctx.restore();
+    text('一个数字，若由许多独立的小因素叠加而成，它的分布会自动变成同一条曲线。',
+      W/2,H*0.38+224,{size:24,alpha:easeOut(cl(t,3.0,4.4))*fo});
+  }
+
+  /* 阶段 2：四张卡片 6.8s 起，29.5s 开始汇聚 */
+  if(t>6.8){
+    const cw=Math.min(W*0.195,350), gap=cw*0.26;
+    const totalW=cw*4+gap*3, x0=W/2-totalW/2;
+    const baseY=H*0.65;
+    const conv=easeIO(cl(t,29.5,36.5));
+    const cardA=1-conv;
+    const outroDim=1-cl(t,44.5,46.5);
+
+    if(cardA>0.002){
+      cards.forEach((c,i)=>{
+        const app=easeOut(cl(t,6.8+i*1.1,7.9+i*1.1));
+        if(app<=0.002)return;
+        const cx=x0+cw/2+i*(cw+gap);
+        const tx=lerp(cx,W/2,conv*0.55);
+        const rise=(1-app)*22;
+
+        ctx.save();
+        ctx.globalAlpha=app*cardA;
+        ctx.translate(tx-cx,-rise);
+
+        ctx.fillStyle='rgba(18,18,30,0.9)';
+        ctx.strokeStyle='rgba(80,80,120,0.32)';ctx.lineWidth=1.5;
+        ctx.beginPath();
+        if(ctx.roundRect)ctx.roundRect(cx-cw/2,baseY-H*0.31,cw,H*0.31,10);
+        else ctx.rect(cx-cw/2,baseY-H*0.31,cw,H*0.31);
+        ctx.fill();ctx.stroke();
+
+        bars(cx,baseY-H*0.045,cw*0.70,H*0.155,heightsFor(c.kind),c.color,0.95);
+
+        text(c.name,cx,baseY-H*0.31+32,{size:25,weight:700});
+        text(c.sub,cx,baseY-H*0.31+64,{size:18,color:c.color,alpha:.95});
+        ctx.restore();
+      });
+    }
+
+    /* 汇聚 → 钟形曲线 */
+    if(conv>0){
+      ctx.save();
+      const glow=ctx.createRadialGradient(W/2,H*0.52,0,W/2,H*0.52,H*0.55);
+      glow.addColorStop(0,'rgba(88,196,221,'+(0.15*conv).toFixed(3)+')');
+      glow.addColorStop(1,'rgba(88,196,221,0)');
+      ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);ctx.restore();
+
+      const hw=H*0.60*easeOut(cl(t,30.5,37.5));
+      const hh=H*0.40*easeOut(cl(t,31.0,38.2));
+      bellFill(W/2,H*0.80,hw,hh,C.blue,0.5*conv);
+      bellStroke(W/2,H*0.80,hw,hh,C.blue,conv,5);
+
+      const s1=cl(t,37.2,40.0)*outroDim, s2=cl(t,38.8,41.6)*outroDim;
+      text('不管你从哪里开始',W/2,H*0.20,{size:34,weight:700,alpha:easeOut(s1)});
+      text('最后都收敛到同一条曲线',W/2,H*0.20+58,{size:34,weight:700,color:C.yellow,alpha:easeOut(s2)});
+    }
+  }
+
+  /* 阶段 3：收尾 */
+  const e=easeOut(cl(t,44.8,47.6));
+  if(e>0){
+    ctx.save();ctx.fillStyle='rgba(10,10,15,'+(1*e).toFixed(3)+')';
+    ctx.fillRect(0,0,W,H);ctx.restore();
+    text('一个被低估的事实',W/2,H*0.32,{size:30,color:C.blue,alpha:easeOut(cl(t,45.2,47.2))});
+    text('加法会产生秩序',W/2,H*0.45,{size:64,weight:700,alpha:easeOut(cl(t,45.8,48.4)),blur:26});
+    text('接下来，用一颗骰子把它讲清楚',W/2,H*0.60,{size:24,color:C.muted,alpha:easeOut(cl(t,47.8,50.4))});
+  }
+}
+
+function setFrame(n){frame=n;draw();}
+
+const state={last:0};let playFrame=0;
+function loop(ts){
+  const dt=state.last?Math.min((ts-state.last)/1000,0.05):0.016;state.last=ts;
+  playFrame+=dt*FPS;
+  if(playFrame>TOTAL+60)playFrame=0;
+  setFrame(Math.floor(playFrame));
+  requestAnimationFrame(loop);
+}
+document.getElementById('reset').addEventListener('click',()=>{playFrame=0;setFrame(0);});
+
+const EXPORT_MODE=new URLSearchParams(location.search).get('export')==='1';
+if(EXPORT_MODE){
+  const s=document.getElementById('stage');
+  s.style.width='1920px';s.style.maxWidth='none';s.style.height='1080px';
+  s.style.aspectRatio='auto';s.style.border='none';s.style.borderRadius='0';s.style.boxShadow='none';
+  document.body.style.margin='0';
+  document.getElementById('controls').style.display='none';
+  document.querySelector('.tag').style.display='none';
+  resize();window.__renderFrame=(n)=>{setFrame(n);};setFrame(0);
+}else{requestAnimationFrame(loop);}
+</script>
+</body>
+</html>
