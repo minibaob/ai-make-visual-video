@@ -123,7 +123,8 @@ def synth(text, voice, out_path, rate="+0%", volume="+0%", pitch="+0Hz"):
     sock = ctx.wrap_socket(raw, server_hostname=TARGET)
     # 2026-11-13: raised from 30s — the WS handshake timed out twice at 30s
     # while the proxy path itself was fine (curl reached the host in <1s).
-    sock.settimeout(90)
+    # 2026-11-15: handshake timed out again at 90s; raised to 180s.
+    sock.settimeout(180)
 
     url = (
         f"{WSS_URL}&ConnectionId={connect_id()}"
