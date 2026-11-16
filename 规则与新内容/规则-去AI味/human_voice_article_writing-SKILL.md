@@ -20,6 +20,17 @@
 
 - Do not open with a follow request or a self introduction.
 
+## Write in the user's own colloquial voice
+
+This is how she rewrote the 2026-11-16 recap post herself. Match it in future articles.
+
+- Drop most punctuation and break lines with spaces instead of commas and periods.
+- Keep paragraphs short, one idea per line.
+- Use short subheads such as 首先 / 所以 to break the flow.
+- Put emojis only at emotion points, sometimes several in a row after the punch line.
+- End by asking the readers for advice in plain words, for example "我该怎么改进内容".
+- One personal backstory line at the start is enough, for example why she picked the account.
+
 ## Remove the signals that read as AI flavor
 
 - Cut formulaic closers that warn the reader or restate the difficulty in polished words.
@@ -30,9 +41,21 @@
 
 - Read the draft aloud in your head and rewrite any line you would not say to a friend.
 
+## Use real experience images
+
+- Use a real screenshot or photo of the actual tool or scene for each image instead of a generated illustration.
+
+- Capture the screenshot yourself on this machine when the tool runs on the web or on Linux.
+
+- Ask the user for a real screenshot from their own computer when the tool runs only on Windows and you cannot run it here.
+
+- Say plainly in the pack which images are real screenshots and which ones still need the user screenshot before you present the pack as ready.
+
 ## Check the draft before approval
 
 - Check the opening, the concrete detail, the ending and every image caption against the rules above.
+
+- Check that every image is a real screenshot or photo or is marked as still needing the user screenshot.
 
 - Compare the draft with the previous post and change the structure when the two share the same skeleton.
 
