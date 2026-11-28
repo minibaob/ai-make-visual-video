@@ -35,3 +35,12 @@
 - **已发布：2026-11-26 16:28，链接 https://www.douyin.com/video/7712394057363901706**（云端浏览器发布，用户电脑 Chrome 当时离线；标题/描述/5 个标签/横屏封面均已核对，时长 02:10，作品数 36→37）。发布后即刻状态为“审核中”（正常审核状态，非已通过）。音频未核实——浏览器读不到公开页音频，需用户手机上听一次确认配音+音乐。封面检测给了 3 条建议（文字展示不全、勿用截屏当封面、竖封面缺失），仅建议，未阻挡发布
 - 数据：待 21:38 复盘时记（播放、涨粉、评论）
 - **动画长版 03B（用户 2026-11-26 13:30 改向：合集系列可做动画、不限制时长、不强制真实素材；13:31 再改：动画+真实素材混着来、横屏 1920×1080、设计要精致）**：横屏动画信息图 + 真实素材插图，129.6 秒，41 句配音，8 场景（钩子/总览/免费/Go/Plus/Pro/API/汇总）。成片 codex-shangche-long-1920x1080.mp4（混音版，8.69MB）+ -silent.mp4，封面 codex-shangche-long-cover-1920x1080.png（横屏双栏）。校验全部通过（ffprobe、ASR 41 句、8 场景抽帧）。策划 plan-03b-codex-animated.md；Remotion 项目 codex-long-remotion/。状态：成片完成，待发布（与 20 秒版二选一，由用户/主代理定发哪个）
+
+## 04 号：Claude Code上车，免费档上不了（AI 工具“全渠道合集”系列第 2 期）
+- 文件：claude-shangche-20s-1080x1920.mp4（混音版 20.0 秒，1080×1920，h264+aac，3.75MB），-silent.mp4，封面 claude-shangche-20s-cover-1080x1920.png
+- 形式：官方定价页当天现截（claude.com/pricing Free $0、cursor.com/pricing Premium $30、antigravity.google/pricing 免费档 Claude 11-30 移除脚注）+ 价格卡 + 红印章 verdict + 6 句配音 + Mixkit《Smile》；钩子“只剩 2 天”（Antigravity 免费档 Claude 2026-11-30 下线，11-28/11-29 发才成立）
+- 校验：ffprobe 规格 OK；ASR 6 句全部在正确时间点出现；抽帧 7 段干净无出画。注意：antigravity.google/models 已 404，改截 /pricing；claude.com/cursor.com 对 Chromium 403 了 CSS/JS/字体，截图用的是当天 curl 下的字节一致本地镜像
+- 计划：workspace/douyin-ai-video/plan-04-claude-20s.md
+- 发布：云端浏览器 Environment 2 打不开 creator.douyin.com（浏览器策略拦截），2026-11-28 12:57 改走用户电脑 Chrome；**已发布：2026-11-28 13:10，链接 https://www.douyin.com/video/7713085155699002643**（标题/描述/5 个标签/竖封面均已核对，时长 00:20；发布后一度显示“审核中”，公开页已可正常播放，进度 00:02→00:06 画面正常）
+- 音频未核实——浏览器读不到公开页音频，需用户在手机上听一次确认配音+音乐
+- 数据：待 21:38 复盘时记（播放、涨粉、评论）
